@@ -1,21 +1,22 @@
-from global_objects import nvim
 from time import sleep, time
+
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QColor, QFont, QPainter, QPixmap, QTextCharFormat, QTextCursor
 from PySide6.QtWidgets import (
-    QMainWindow,
     QApplication,
-    QGraphicsView,
-    QGraphicsScene,
-    QTextBrowser,
     QGraphicsProxyWidget,
     QGraphicsRectItem,
+    QGraphicsScene,
+    QGraphicsView,
+    QMainWindow,
+    QTextBrowser,
+    QTextEdit,
 )
-from PySide6.QtGui import QColor, QFont, QPainter, QPixmap
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtWidgets import QApplication, QTextBrowser, QTextEdit
-from PySide6.QtGui import QTextCursor, QTextCharFormat
+
+from global_objects import nvim
 
 
-class NonSelectableTextBrowser(QTextBrowser):
+class NonSelectableTextEdit(QTextEdit):
     def mousePressEvent(self, event):
         # Skip the mouse press event to prevent it from being handled by QTextBrowser
         event.ignore()
@@ -35,28 +36,19 @@ class DraggableText(QGraphicsProxyWidget):
 
         self.buffer = buffer_handle
 
-        self.text_browser = NonSelectableTextBrowser()
-        # self.text_browser = QTextEdit()
-        self.text_browser.setFont(QFont("monospace", 12))
-        self.text_browser.setFixedWidth(300)
-        self.text_browser.setFixedHeight(100)
-        # make bg black
-        # create a pale grey border
-        self.text_browser.setStyleSheet(
-            # background-color: black; color: white;
+        self.text_box = NonSelectableTextEdit()
+        self.text_box.setFont(QFont("monospace", 12))
+        self.text_box.setFixedWidth(300)
+        self.text_box.setFixedHeight(100)
+        # make bg black, create a pale grey border
+        self.text_box.setStyleSheet(
             """
+            background-color: black; color: white;
             border: 1px solid grey;
             """
         )
-        self.setWidget(self.text_browser)
-        
-        # make it editable
 
-
-        # self.setFlag(QGraphicsProxyWidget.ItemIsMovable, True)
-        # self.textBrowser.setFlag(QTextBrowser.ItemIsMovable, True)
-        # self.setFlag(QGraphicsProxyWidget.ItemIsSelectable, True)
-        # self.setFlag(QGraphicsProxyWidget.ItemSendsGeometryChanges, True)
+        self.setWidget(self.text_box)
 
     def update_text(self):
         # set new text
@@ -66,7 +58,7 @@ class DraggableText(QGraphicsProxyWidget):
                 # add space so that cursor can be displayed there
                 lines[i] = " "
         new_text = "\n".join(lines)
-        self.text_browser.setText(new_text)
+        self.text_box.setText(new_text)
 
         # draw marks
 
@@ -75,33 +67,24 @@ class DraggableText(QGraphicsProxyWidget):
             return
 
         mode = nvim.api.get_mode()["mode"]
-        doc = self.text_browser.document()
+        doc = self.text_box.document()
 
         # set cursor
         curs_y, curs_x = nvim.current.window.cursor
         curs_y -= 1
         # get the one number char position
         pos = doc.findBlockByLineNumber(curs_y).position() + curs_x
+        # get focus so that cursor is displayed
+        cursor = self.text_box.textCursor()
+
         if mode == "n":
-            pass
-            # cursor = QTextCursor(doc)
-            # # cursor.setPosition(pos, QTextCursor.MoveAnchor)
-            # # cursor.setPosition(pos + 1, QTextCursor.KeepAnchor)
-            # cursor.setPosition(pos)
-            # focus widget to display cursor
+            cursor.setPosition(pos, QTextCursor.MoveAnchor)
+            cursor.setPosition(pos + 1, QTextCursor.KeepAnchor)
 
-            # self.text_browser.setFocus()
-            # # self.text_browser.setDocument(doc)
-            # self.text_browser.repaint()
-
-            # self.text_browser.setTextCursor(cursor)
-
-            # fmt = QTextCharFormat()
-            # fmt.setBackground(Qt.magenta)
-            # cursor.setCharFormat(fmt)
-            # this highlights all the text
-            # instead of just the one char
-            # cursor.movePosition(QTextCursor.PreviousCharacter, QTextCursor.KeepAnchor)
+        elif mode == "i":
+            self.text_box.setFocus()
+            cursor.setPosition(pos)
+        self.text_box.setTextCursor(cursor)
 
     def wheelEvent(self, event):
         pos = self.boundingRect().center()
@@ -111,7 +94,7 @@ class DraggableText(QGraphicsProxyWidget):
         scale = self.scale() * 1.0005 ** event.delta()
         self.setScale(scale)
 
-    # def mouseMoveEvent(self, event):
-    #     # drag around
-    #     movevent = event.screenPos() - event.lastScreenPos()
-    #     self.moveBy(movevent.x(), movevent.y())
+    def mouseMoveEvent(self, event):
+        # drag around
+        movevent = event.screenPos() - event.lastScreenPos()
+        self.moveBy(movevent.x(), movevent.y())

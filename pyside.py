@@ -14,18 +14,18 @@ from PySide6.QtWidgets import (
     QTextBrowser,
 )
 
-from global_objects import nvim
+from global_objects import nvim, FPS
 from text_object import DraggableText
 
 # TODO
-# highlights
-# to be general, draw highlights, by highlighting per line
-# remove insert mode curson when normal or unfocused
-# custom wrappint, extending height
 # saving
+# only update when nvim notifies of a change
+#
 # low:
 # polish chars seem to break stuff, because they throuw position out of range,
 #     they are probably more chars than one
+# custom wrappint, extending height
+# native node dragging would maybe be more efficient (there are cases with big text where it lags)
 
 
 
@@ -40,6 +40,7 @@ class GraphicView(QGraphicsView):
         self.setScene(QGraphicsScene())
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.global_scale = 1.0
 
     def mousePressEvent(self, event):
         item = self.scene().itemAt(event.screenPos(), self.transform())
@@ -56,7 +57,7 @@ class GraphicView(QGraphicsView):
         if num_of_texts == len(nvim.buffers):
             # create new buffer
             nvim.command("new")
-        text = DraggableText(nvim.current.buffer)
+        text = DraggableText(nvim.current.buffer, 1)
         text.setPos(pos)
         self.scene().addItem(text)
 
@@ -104,6 +105,31 @@ class GraphicView(QGraphicsView):
         nvim.input(text)
         # super().keyPressEvent(event)
 
+    def wheelEvent(self, event):
+        zoom_factor = 1.0005 ** event.angleDelta().y()
+
+        item = self.scene().itemAt(event.position(), self.transform())
+        if isinstance(item, DraggableText):
+            # zoom it
+            item.zoom(zoom_factor, self.global_scale)
+        else:
+            # zoom the whole view
+            self.global_scale *= zoom_factor
+            # self.scale(zoom_factor, zoom_factor)
+            self.update_texts()
+
+    def update_texts(self):
+        # unfocus the text boxes - better would be to always have focus here
+        self.dummy.setFocus()
+
+        if nvim.api.get_mode()["blocking"]:
+            return
+
+        for item in self.scene().items():
+            if isinstance(item, DraggableText):
+                item.update_text()
+                item.reposition(self.global_scale)
+        
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -115,18 +141,7 @@ class MainWindow(QMainWindow):
         self.resize(500, 500)
         self.show()
 
-    def update_texts(self):
-        # unfocus the text boxes
-        self.view.dummy.setFocus()
-
-        if nvim.api.get_mode()["blocking"]:
-            return
-
-        for item in self.view.scene().items():
-            if isinstance(item, DraggableText):
-                item.update_text()
-
-
+        
 if __name__ == "__main__":
     import sys
     
@@ -147,7 +162,7 @@ if __name__ == "__main__":
     w.view.create_text(w.view.mapToScene(100, 100))
     
     timer = QTimer()
-    timer.timeout.connect(w.update_texts)
-    timer.start(16)
+    timer.timeout.connect(w.view.update_texts)
+    timer.start(1000 / FPS)
 
     sys.exit(app.exec())

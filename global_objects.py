@@ -6,3 +6,4 @@ from PySide6.QtWidgets import (
 
 nvim = pynvim.attach("child", argv=["/usr/bin/env", "nvim", "--embed", "--headless"])
 
+FPS = 60

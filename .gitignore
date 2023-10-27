@@ -2,3 +2,5 @@ venv
 junk
 .vscode
 __pycache__
+test
+.test_backup

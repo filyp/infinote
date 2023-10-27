@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
     QTextEdit,
 )
 
-from global_objects import nvim
+from global_objects import nvim, Config
 
 
 class NonSelectableTextEdit(QTextEdit):
@@ -40,19 +40,23 @@ class NonSelectableTextEdit(QTextEdit):
 
 
 class DraggableText(QGraphicsProxyWidget):
-    def __init__(self, buffer_handle, scale=1.0):
+    def __init__(self, buffer_handle, view, plane_pos, manual_scale=1.0):
         super().__init__()
+        
+        self.autoshrink = Config.autoshrink
 
         self.buffer = buffer_handle
-        self.scale_ = scale
-        self.setScale(scale)
+        self.view = view
+        self.plane_pos = plane_pos
+        self.manual_scale = manual_scale
+        self.setScale(manual_scale)
 
         self.text_box = NonSelectableTextEdit()
 
         font = QFont("monospace", 12)
         self.text_box.setFont(font)
-        self.text_box.setFixedWidth(300)
-        self.text_box.setFixedHeight(QFontMetrics(font).height())
+        self.text_box.setFixedWidth(Config.text_width)
+
         # make bg black, create a pale grey border
         self.text_box.setStyleSheet(
             """
@@ -62,20 +66,14 @@ class DraggableText(QGraphicsProxyWidget):
         )
 
         self.setWidget(self.text_box)
-
-    def zoom(self, zoom_factor, global_scale):
-        # # pos = event.pos()   # this is unstable
-        # pos = self.boundingRect().center()
-        # self.setTransformOriginPoint(pos)
-
-        self.scale_ *= zoom_factor
-        self.reposition(global_scale)
-        # todo? maybe defocus here too
+        self.update_text()
 
     def mouseMoveEvent(self, event):
         # drag around
         movevent = event.screenPos() - event.lastScreenPos()
-        self.moveBy(movevent.x(), movevent.y())
+        self.plane_pos += movevent / self.view.global_scale
+        self.reposition()
+        self.view.dummy.setFocus()
 
     def _yx_to_pos(self, y, x):
         # get the one number char position
@@ -111,8 +109,8 @@ class DraggableText(QGraphicsProxyWidget):
             # this is tricky, because all the marks and curson also need to be wrapped
             # I'd need a second "highlight layer" where non-space chars are some
             # placeholder like "x", and colors are some other letters
-            # 
-            # leave it for now, it's too buggy and only would be worth it if I were 
+            #
+            # leave it for now, it's too buggy and only would be worth it if I were
             # to do some funky stuff with text size shrink on indents
 
             # for now just
@@ -120,6 +118,21 @@ class DraggableText(QGraphicsProxyWidget):
             wrapped_lines.append(wrapped_line)
         new_text = "\n".join(wrapped_lines)
         self.text_box.setText(new_text)
+
+    def get_scale(self):
+        global_scale = self.view.global_scale
+        if self.autoshrink:
+            # euclidean magniture of plane_pos
+            distance = (self.plane_pos.x() ** 2 + self.plane_pos.y() ** 2) ** 0.5
+            distance_scale = distance / Config.initial_position[0]
+            return self.manual_scale * global_scale * distance_scale
+        else:
+            return self.manual_scale * global_scale
+
+    def reposition(self):
+        global_scale = self.view.global_scale
+        self.setScale(self.get_scale())
+        self.setPos(self.plane_pos * global_scale)
 
     def update_text(self):
         # set new text
@@ -189,9 +202,20 @@ class DraggableText(QGraphicsProxyWidget):
                 self.highlight("gray", (y, x_start), (y, x_end))
 
         # set height
-        height = self.text_box.document().size().height() 
+        height = self.text_box.document().size().height()
         self.text_box.setFixedHeight(height + 2)
-
-    def reposition(self, global_scale):
-        self.setScale(self.scale_ * global_scale)
+        
+    def save(self, savedir):
+        savefile = savedir / f"{self.buffer.number}.md"
+        lines = self.buffer[:]
+        
+        # frontmatter, containg plane_pos and manual_scale
+        frontmatter = f"""\
+---
+plane_pos: [{self.plane_pos.x()}, {self.plane_pos.y()}]
+manual_scale: {self.manual_scale}
+---
+"""
+        with savefile.open("w") as f:
+            f.write(frontmatter + "\n".join(lines))
         

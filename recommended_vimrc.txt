@@ -9,11 +9,20 @@ call plug#end()
 let g:bookmark_save_per_working_dir = 1
 let g:bookmark_auto_save = 1
 
-map <Plug> <Plug>Markdown_Fold
-nnoremap ,f <Plug>Markdown_Fold
 
 nnoremap ,j <Plug>(leap-from-window)
 
+" to free up <C-i> for jump forward (Ctrl+i is the same keycode as Tab)
+nnoremap ,f <Plug>Markdown_Fold
+
+
+""""""""""""""""""""""""""""
+" optional
+
+" " jump around with Ctrl+o and Ctrl+i
+
+" " autowrite:
 " autocmd TextChanged,TextChangedI <buffer> silent write
 
-" jump around with Ctrl+o and Ctrl+i
+" " disable enter mapping
+" map <Plug> <Plug>Markdown_FollowLink

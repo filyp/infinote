@@ -1,6 +1,6 @@
 import pynvim
 from config import Config
-from key_handling import translate_key_event_to_vim
+from key_handling import KeyHandler
 from PySide6.QtCore import QPointF, Qt, QTimer
 from PySide6.QtGui import QColor, QFont, QPainter, QPixmap
 from PySide6.QtWidgets import (
@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QGraphicsScene,
     QGraphicsView,
     QMainWindow,
+    QStatusBar,
     QTextBrowser,
 )
 from text_object import DraggableText
@@ -29,7 +30,9 @@ class GraphicView(QGraphicsView):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.global_scale = 1.0
         self.last_file_num = 0
+        self.key_handler = KeyHandler(nvim)
 
+        # note: this bg may be unnecessary (dummy object is necessary though)
         # create a black background taking up all the space, to cover up glitches
         # it also serves as a dummy object that can grab focus,
         # so that the text boxes can be unfocused
@@ -42,13 +45,22 @@ class GraphicView(QGraphicsView):
         self.scene().addItem(bg)
         self.dummy = bg
 
+        # create a status bar
+        self.status_bar = QStatusBar()
+        self.status_bar.showMessage("")
+        # place it at the top and display
+        self.status_bar.setGeometry(0, 0, screen_size.width(), 20)
+        # make it black
+        self.status_bar.setStyleSheet("QStatusBar{background-color: black;}")
+        self.scene().addWidget(self.status_bar)
+
     # event handling methods
 
     def mousePressEvent(self, event):
         item = self.scene().itemAt(event.screenPos(), self.transform())
         if isinstance(item, DraggableText):
             # clicked on text, so make it current
-            self.nvim.command(f"buffer {item.filenum}.md")
+            self.nvim.command(f"buffer {item.buffer.number}")
             self.update_texts()
         else:
             # clicked bg, so create a new text
@@ -61,11 +73,10 @@ class GraphicView(QGraphicsView):
         super().resizeEvent(event)
 
     def keyPressEvent(self, event):
-        text = translate_key_event_to_vim(event)
-        if text is None:
-            return
-        self.nvim.input(text)
+        self.key_handler.handle_key_event(event)
         self.update_texts()
+        command_line = self.key_handler.get_command_line()
+        self.status_bar.showMessage(command_line)
         # super().keyPressEvent(event)
 
     def wheelEvent(self, event):
@@ -124,7 +135,7 @@ class GraphicView(QGraphicsView):
         for buf in self.nvim.buffers:
             if buf not in bound_buffers:
                 unbound_buf = buf
-                print("unbound buffer found")
+                # print("unbound buffer found")
                 break
         assert unbound_buf is not None, "no unused buffer found"
 
@@ -149,12 +160,20 @@ class GraphicView(QGraphicsView):
         # delete empty texts
         for text in self.get_texts():
             if text.buffer == self.nvim.current.buffer:
+                # current buffer can be empty
                 continue
-            if text.buffer[:] == [""]:
-                # TODO this does not delete!
-                self.nvim.command(f"bdelete! {text.buffer.number}")
+            if text.buffer[:] == [""] or not text.buffer[:]:
+                if text.filenum >= 0:
+                    self.nvim.command(f"call delete('{text.filenum}.md')")
+                self.nvim.command(f"bwipeout! {text.buffer.number}")
                 self.scene().removeItem(text)
                 del text
+
+        # get the cmd line
+        # cmdline = self.nvim.command_output("echo getcmdline()")
+        # cmdline = self.nvim.command_output("set statusline?")
+        # cmdline = self.nvim.api.get_mode()
+        # print(f"'{cmdline=}'")
 
     def get_texts(self):
         for item in self.scene().items():

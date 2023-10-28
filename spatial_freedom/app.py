@@ -22,37 +22,33 @@ from text_object import DraggableText
 from view import GraphicView
 
 # TODO
-# correct deletion of buffers
-# can't drag spedial buffers
 # jump back from bookmarks by :buffer 4.md
-# backups
 #
-# tab in insert mode is caught by qt, so it doesn't get to nvim
-# dumb fix is to use Ctrl-I
-# for more granular control of bookmarks, each group would need to be a separate folder?
-# but also separate nvim session, and I don't want that
-# but maybe this option could be set https://github.com/MattesGroeger/vim-bookmarks#bookmarks-per-buffer
-#
-# saving - each buffer should get saved to a file
-#  then we create bookmarks on them
-#  and in case of failure, stuff isn't lost
-#  and the storage format is nice, extensible and robust
-#  filenames are just buffer numbers, .md extension, frontmatter with metadata
-#  have bookmarks per layer folder
-# when someone chooses a bookmark and jumps, we get the buffer number
-#  from filename, and we set that buffer as current
-#  then we go to the right line num
-#  unfold if needed
+# to some texts I can't jump, why??
+# because parts of buffer are not visible
+# and also some buffers can stop being displayed
+# https://github.com/ggandor/leap.nvim/issues/196
+# setting 10000 ui lines helps (temporarily) but there is a small lag
+# rigcz solution would be to have multiple windows, but this may break leap
+# gluing
 #
 # mid:
-# when leaving an empty buffer, delete it
-# ribbon for vim commands
+# highlight search
 # save web of transitions with timestamps
+#
+# ? backups
+# ?:
+# nicer sizing, tweak the width/position of boxes
+
+# for more granular control of bookmarks, each group would need to be a separate folder?
+# but also separate nvim session, and I don't want that
+# ? but maybe this option could be set https://github.com/MattesGroeger/vim-bookmarks#bookmarks-per-buffer
 #
 # low:
 # polish chars seem to break stuff, because they throuw position out of range,
 #     they are probably more chars than one
 # custom wrappint, extending height
+# ? (have bookmarks per layer folder)
 # native node dragging would maybe be more efficient (there are cases with big text where it lags)
 # if stuff gets too heavy, move back to QTextBrowser, and just have some different color for insert cursor
 # solve those weird glitches when moving text around
@@ -86,6 +82,11 @@ if __name__ == "__main__":
     nvim = pynvim.attach(
         "child", argv=["/usr/bin/env", "nvim", "--embed", "--headless"]
     )
+    # this is needed to create a lot of buffers in split
+    # TODO this is a hack though - better to have it in multiple windows
+    # and then somehow enable leaping through multiple windows? if that is possible?
+    nvim.ui_attach(80, 10000, True)
+    # nvim = pynvim.attach('socket', path='/tmp/nvim')
 
     app = QApplication(sys.argv)
     w = MainWindow(nvim)

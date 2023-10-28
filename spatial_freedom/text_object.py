@@ -37,6 +37,9 @@ class NonSelectableTextEdit(QTextEdit):
         # Skip the mouse release event to prevent it from being handled by QTextBrowser
         event.ignore()
 
+    def keyPressEvent(self, event):
+        event.ignore()
+
 
 class DraggableText(QGraphicsProxyWidget):
     def __init__(self, nvim, buffer_handle, filenum, view, plane_pos, manual_scale=1.0):
@@ -55,17 +58,17 @@ class DraggableText(QGraphicsProxyWidget):
 
         self.text_box = NonSelectableTextEdit()
 
-        font = QFont("monospace", 12)
+        font = QFont("monospace", Config.font_size)
         self.text_box.setFont(font)
         self.text_box.setFixedWidth(Config.text_width)
 
         # make bg black, create a pale grey border
-        self.text_box.setStyleSheet(
-            """
+        # if filenum<0, it's non-persistent buffer, so mark it's border yellow
+        style = f"""
             background-color: black; color: white;
-            border: 1px solid grey;
-            """
-        )
+            border: 1px solid {'#555' if self.filenum >= 0 else '#cc0'};
+        """
+        self.text_box.setStyleSheet(style)
 
         self.setWidget(self.text_box)
         self.update_text()

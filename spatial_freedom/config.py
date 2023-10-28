@@ -9,3 +9,4 @@ class Config:
     # FPS = 60
     text_width = 300
     initial_position = (500, 40)
+    font_size = 12

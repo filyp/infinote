@@ -1,6 +1,7 @@
 import textwrap
 from time import sleep, time
 
+from config import Config
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import (
     QColor,
@@ -21,8 +22,6 @@ from PySide6.QtWidgets import (
     QTextBrowser,
     QTextEdit,
 )
-
-from config import Config
 
 
 class NonSelectableTextEdit(QTextEdit):

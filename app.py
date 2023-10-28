@@ -21,10 +21,16 @@ from config import Config
 from text_object import DraggableText
 
 # TODO
-# backups
-# clicking on a text should make it current
-# in meta save current scale
 # correct deletion of buffers
+# can't drag spedial buffers
+# jump back from bookmarks by :buffer 4.md
+# backups
+#
+# tab in insert mode is caught by qt, so it doesn't get to nvim
+# dumb fix is to use Ctrl-I
+# for more granular control of bookmarks, each group would need to be a separate folder?
+# but also separate nvim session, and I don't want that
+# but maybe this option could be set https://github.com/MattesGroeger/vim-bookmarks#bookmarks-per-buffer
 #
 # saving - each buffer should get saved to a file
 #  then we create bookmarks on them
@@ -126,7 +132,12 @@ class GraphicView(QGraphicsView):
 
     def mousePressEvent(self, event):
         item = self.scene().itemAt(event.screenPos(), self.transform())
-        if not isinstance(item, DraggableText):
+        if isinstance(item, DraggableText):
+            # clicked on text, so make it current
+            self.nvim.command(f"buffer {item.filenum}.md")
+            self.update_texts()
+        else:
+            # clicked bg, so create a new text
             self.create_text(event.screenPos() / self.global_scale)
         super().mousePressEvent(event)
         self.dummy.setFocus()
@@ -275,7 +286,10 @@ if __name__ == "__main__":
     files = [f for f in savedir.iterdir() if f.suffix == ".md" and f.stem.isnumeric()]
     meta_path = Path("meta.json")
     if files and meta_path.exists():
+        # load all
         meta = json.loads(meta_path.read_text())
+
+        w.view.global_scale = meta["global_scale"]
 
         # load them into buffers
         for filename in files:
@@ -320,7 +334,7 @@ if __name__ == "__main__":
         text.save()
 
     # save metadata json
-    meta = dict()
+    meta = dict(global_scale=w.view.global_scale)
     for text in w.view.get_texts():
         if text.filenum < 0:
             # this buffer was not created by this program, so don't save it

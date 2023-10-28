@@ -1,15 +1,15 @@
-from time import sleep, time
 import textwrap
+from time import sleep, time
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import (
     QColor,
     QFont,
+    QFontMetrics,
     QPainter,
     QPixmap,
     QTextCharFormat,
     QTextCursor,
-    QFontMetrics,
 )
 from PySide6.QtWidgets import (
     QApplication,
@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
     QTextEdit,
 )
 
-from global_objects import nvim, Config
+from config import Config
 
 
 class NonSelectableTextEdit(QTextEdit):
@@ -40,12 +40,15 @@ class NonSelectableTextEdit(QTextEdit):
 
 
 class DraggableText(QGraphicsProxyWidget):
-    def __init__(self, buffer_handle, view, plane_pos, manual_scale=1.0):
+    def __init__(self, nvim, buffer_handle, filenum, view, plane_pos, manual_scale=1.0):
         super().__init__()
-        
+
         self.autoshrink = Config.autoshrink
 
+        # note that num doesn't need to be the same as buffer_handle.number
+        self.nvim = nvim
         self.buffer = buffer_handle
+        self.filenum = filenum
         self.view = view
         self.plane_pos = plane_pos
         self.manual_scale = manual_scale
@@ -141,7 +144,7 @@ class DraggableText(QGraphicsProxyWidget):
 
         # draw marks
         buf_num = self.buffer.number
-        marks = nvim.api.buf_get_extmarks(
+        marks = self.nvim.api.buf_get_extmarks(
             buf_num, -1, (0, 0), (-1, -1), {"details": True}
         )
         positions = []
@@ -162,13 +165,13 @@ class DraggableText(QGraphicsProxyWidget):
             self.highlight("orange", (y + 1, x + 1), (y + 1, x + 1))
 
         # the rest if done only if this node's buffer is the current buffer
-        if nvim.current.buffer != self.buffer:
+        if self.nvim.current.buffer != self.buffer:
             return
 
-        mode = nvim.api.get_mode()["mode"]
+        mode = self.nvim.api.get_mode()["mode"]
 
         # set cursor
-        curs_y, curs_x = nvim.current.window.cursor
+        curs_y, curs_x = self.nvim.current.window.cursor
         pos = self._yx_to_pos(curs_y, curs_x)
         # get focus so that cursor is displayed
         cursor = self.text_box.textCursor()
@@ -182,8 +185,8 @@ class DraggableText(QGraphicsProxyWidget):
 
         # set selection
         if mode == "v" or mode == "V" or mode == "\x16":
-            s = nvim.eval('getpos("v")')[1:3]
-            e = nvim.eval('getpos(".")')[1:3]
+            s = self.nvim.eval('getpos("v")')[1:3]
+            e = self.nvim.eval('getpos(".")')[1:3]
             # if end before start, swap
             if s[0] > e[0] or (s[0] == e[0] and s[1] > e[1]):
                 s, e = e, s
@@ -204,18 +207,12 @@ class DraggableText(QGraphicsProxyWidget):
         # set height
         height = self.text_box.document().size().height()
         self.text_box.setFixedHeight(height + 2)
-        
-    def save(self, savedir):
-        savefile = savedir / f"{self.buffer.number}.md"
-        lines = self.buffer[:]
-        
-        # frontmatter, containg plane_pos and manual_scale
-        frontmatter = f"""\
----
-plane_pos: [{self.plane_pos.x()}, {self.plane_pos.y()}]
-manual_scale: {self.manual_scale}
----
-"""
-        with savefile.open("w") as f:
-            f.write(frontmatter + "\n".join(lines))
-        
+
+    def save(self):
+        if self.filenum < 0:
+            # this buffer was not created by this program, so don't save it
+            return
+        # set this buffer as current
+        self.nvim.api.set_current_buf(self.buffer.number)
+        # save it
+        self.nvim.command("w")

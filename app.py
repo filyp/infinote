@@ -1,15 +1,15 @@
+import json
+import os
 import sys
 from pathlib import Path
 from time import sleep, time
 
 import pynvim
-import yaml
-from PySide6.QtCore import Qt, QTimer, QPointF
+from PySide6.QtCore import QPointF, Qt, QTimer
 from PySide6.QtGui import QColor, QFont, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QGraphicsItem,
-    QGraphicsProxyWidget,
     QGraphicsRectItem,
     QGraphicsScene,
     QGraphicsView,
@@ -17,10 +17,15 @@ from PySide6.QtWidgets import (
     QTextBrowser,
 )
 
-from global_objects import Config, nvim
+from config import Config
 from text_object import DraggableText
 
 # TODO
+# backups
+# clicking on a text should make it current
+# in meta save current scale
+# correct deletion of buffers
+#
 # saving - each buffer should get saved to a file
 #  then we create bookmarks on them
 #  and in case of failure, stuff isn't lost
@@ -35,6 +40,7 @@ from text_object import DraggableText
 # mid:
 # when leaving an empty buffer, delete it
 # ribbon for vim commands
+# save web of transitions with timestamps
 #
 # low:
 # polish chars seem to break stuff, because they throuw position out of range,
@@ -44,6 +50,7 @@ from text_object import DraggableText
 # if stuff gets too heavy, move back to QTextBrowser, and just have some different color for insert cursor
 # solve those weird glitches when moving text around
 # dragging take correction for rescaling, keep mouse pos fixed on text pos
+# unnamed buffers, created with piping something to vim, if they exist, they can fuck stuff up, binding gets incorrect
 
 
 def translate_key_event_to_vim(event):
@@ -79,8 +86,8 @@ def translate_key_event_to_vim(event):
         text = "S-" + text
     if mods & Qt.AltModifier:
         text = "A-" + text
-    # if mods & Qt.MetaModifier:
-    #     text = "M-" + text
+    if mods & Qt.MetaModifier:
+        text = "M-" + text
     # if mods & Qt.KeypadModifier:
     #     text = "W-" + text
 
@@ -91,8 +98,9 @@ def translate_key_event_to_vim(event):
 
 
 class GraphicView(QGraphicsView):
-    def __init__(self, parent=None):
+    def __init__(self, nvim, parent=None):
         super().__init__(parent)
+        self.nvim = nvim
         self.setRenderHint(QPainter.Antialiasing)
         self.setBackgroundBrush(QColor(Qt.black))
         self.setInteractive(True)
@@ -102,6 +110,7 @@ class GraphicView(QGraphicsView):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.global_scale = 1.0
+        self.last_file_num = 0
 
         # create a black background taking up all the space, to cover up glitches
         # it also serves as a dummy object that can grab focus,
@@ -126,23 +135,55 @@ class GraphicView(QGraphicsView):
         self.scene().setSceneRect(0, 0, event.size().width(), event.size().height())
         super().resizeEvent(event)
 
-    def create_text(self, pos, manual_scale=1.0):
+    def open_filenum(self, pos, manual_scale, filenum, buffer=None):
         if isinstance(pos, (tuple, list)):
             pos = QPointF(*pos)
-        num_of_texts = len(self.scene().items())
-        if num_of_texts == len(nvim.buffers):
-            # create new buffer
-            nvim.command("new")
-        text = DraggableText(nvim.current.buffer, self, pos, manual_scale)
+
+        if buffer is None:
+            # no buffer provided, so open the one with the given filenum
+            num_of_texts = len(list(self.get_texts()))
+            if num_of_texts == 0:
+                self.nvim.command(f"edit {filenum}.md")
+            elif num_of_texts == len(self.nvim.buffers):
+                # create new file
+                self.nvim.command(f"split {filenum}.md")
+            buffer = self.nvim.current.buffer
+        else:
+            # buffer provided, so open it
+            assert type(buffer) == pynvim.api.buffer.Buffer
+
+        text = DraggableText(self.nvim, buffer, filenum, self, pos, manual_scale)
         self.scene().addItem(text)
         self.update_texts()
         return text
+
+    def create_text(self, pos, manual_scale=1.0):
+        num_of_texts = len(list(self.get_texts()))
+        if num_of_texts == len(self.nvim.buffers) or num_of_texts == 0:
+            self.last_file_num += 1
+            return self.open_filenum(pos, manual_scale, self.last_file_num)
+
+        # some buffer was created some other way than calling create_text,
+        # so mark it to not be saved
+        filenum = -1
+
+        # get the unused buffer
+        bound_buffers = [text.buffer for text in self.get_texts()]
+        unbound_buf = None
+        for buf in self.nvim.buffers:
+            if buf not in bound_buffers:
+                unbound_buf = buf
+                print("unbound buffer found")
+                break
+        assert unbound_buf is not None, "no unused buffer found"
+
+        return self.open_filenum(pos, manual_scale, filenum, unbound_buf)
 
     def keyPressEvent(self, event):
         text = translate_key_event_to_vim(event)
         if text is None:
             return
-        nvim.input(text)
+        self.nvim.input(text)
         self.update_texts()
 
         # super().keyPressEvent(event)
@@ -170,19 +211,21 @@ class GraphicView(QGraphicsView):
         # there are glitches when moving texts around
         # so redraw the background first (black)
 
-        if nvim.api.get_mode()["blocking"]:
+        if self.nvim.api.get_mode()["blocking"]:
             return
 
         # redraw
         for text in self.get_texts():
             text.update_text()
             text.reposition()
-        
+
         # delete empty texts
         for text in self.get_texts():
-            if text.buffer == nvim.current.buffer:
+            if text.buffer == self.nvim.current.buffer:
                 continue
             if text.buffer[:] == [""]:
+                # TODO this does not delete!
+                self.nvim.command(f"bdelete! {text.buffer.number}")
                 self.scene().removeItem(text)
                 del text
 
@@ -193,13 +236,13 @@ class GraphicView(QGraphicsView):
 
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, nvim):
         super().__init__()
-        self.view = GraphicView()
+        self.view = GraphicView(nvim)
         self.setCentralWidget(self.view)
-        self.showMaximized()
+        # self.showMaximized()
         # # not maximized, but 1000x1000
-        # self.resize(1900, 1000)
+        self.resize(1900, 600)
         self.show()
 
 
@@ -209,31 +252,43 @@ def nvim_notification(method, args):
 
 if __name__ == "__main__":
     savedir = Path(sys.argv[1])
+    savedir = savedir.absolute()
     savedir.mkdir(parents=True, exist_ok=True)
 
+    # change working directory to savedir
+    os.chdir(savedir)
+
+    nvim = pynvim.attach(
+        "child", argv=["/usr/bin/env", "nvim", "--embed", "--headless"]
+    )
+
     app = QApplication(sys.argv)
-    w = MainWindow()
+    w = MainWindow(nvim)
 
     # make the cursor non-blinking
     app.setCursorFlashTime(0)
 
+    assert len(nvim.buffers) == 1, "we require nvim to start with one buffer"
+
     # if there is at least one markdown file, open it
     # names must be integers
     files = [f for f in savedir.iterdir() if f.suffix == ".md" and f.stem.isnumeric()]
-    if files:
+    meta_path = Path("meta.json")
+    if files and meta_path.exists():
+        meta = json.loads(meta_path.read_text())
+
         # load them into buffers
         for filename in files:
             full_text = filename.read_text()
-            # parse frontmatter
-            _, frontmatter, saved_buffer = full_text.split("---\n", 2)
-            fm_dict = yaml.safe_load(frontmatter)
+            index = int(filename.stem)
+            text_info = meta[str(index)]
             # create text
-            text = w.view.create_text(fm_dict["plane_pos"], fm_dict["manual_scale"])
-            text.buffer[:] = saved_buffer.splitlines()
-            text.update_text()
-        # do some dummy vim action to make sure buffers are loaded
-        # nvim.input("<Esc>")
-        # w.view.update_texts()
+            text = w.view.open_filenum(
+                text_info["plane_pos"], text_info["manual_scale"], index
+            )
+        # prepare the next file number
+        max_filenum = max(int(f.stem) for f in files)
+        w.view.last_file_num = max_filenum
     else:
         # create one text
         text = w.view.create_text(Config.initial_position)
@@ -244,27 +299,37 @@ if __name__ == "__main__":
         w.view.global_scale = window_width / (initial_x * 2 + first_text_width)
         w.view.update_texts()
 
-        print(first_text_width)
-        print(window_width)
-        print(w.view.global_scale)
-
     exit_code = app.exec()
 
     # save
-    # backpup the dir to .[name]_backup
-    backup = savedir.parent / f".{savedir.name}_backup"
-    # if backup exists, delete it
-    if backup.exists():
-        for f in backup.iterdir():
-            f.unlink()
-        backup.rmdir()
-    # move the savedir to backup
-    savedir.rename(backup)
-    # create a new savedir
-    new_savedir = Path(sys.argv[1])
-    new_savedir.mkdir(parents=True, exist_ok=True)
+    # # backpup the dir to .[name]_backup
+    # backup = savedir.parent / f".{savedir.name}_backup"
+    # # if backup exists, delete it
+    # if backup.exists():
+    #     for f in backup.iterdir():
+    #         f.unlink()
+    #     backup.rmdir()
+    # # move the savedir to backup
+    # savedir.rename(backup)
+    # # create a new savedir
+    # new_savedir = Path(sys.argv[1])
+    # new_savedir.mkdir(parents=True, exist_ok=True)
+
     # save each text
     for text in w.view.get_texts():
-        text.save(new_savedir)
+        text.save()
+
+    # save metadata json
+    meta = dict()
+    for text in w.view.get_texts():
+        if text.filenum < 0:
+            # this buffer was not created by this program, so don't save it
+            continue
+        meta[text.filenum] = dict(
+            plane_pos=tuple(text.plane_pos.toTuple()),
+            manual_scale=text.manual_scale,
+        )
+    meta_path = Path("meta.json")
+    meta_path.write_text(json.dumps(meta, indent=4))
 
     sys.exit(exit_code)

@@ -95,10 +95,20 @@ class DraggableText(QGraphicsProxyWidget):
         # x = A + K / L * (y - B)
         # print(x, y)
         # self.plane_pos = QPointF(x, y)
+        scale1 = self.get_plane_scale()
 
         # drag around
-        movement = event.screenPos() - event.lastScreenPos()
-        self.plane_pos += movement / self.view.global_scale
+        mouse_start = event.lastScreenPos() / self.view.global_scale
+        mouse_end = event.screenPos() / self.view.global_scale
+        movement = mouse_end - mouse_start
+        self.plane_pos += movement
+
+        # pos = QPointF(event.pos())
+        # c1 = mouse_start - pos
+        # scale2 = self.get_plane_scale()
+        # self.plane_pos = pos + movement + c1 - c1 * scale2 / scale1
+        # print(pos, movement, c1, scale1, scale2)
+
         self.reposition()
         self.view.dummy.setFocus()
 

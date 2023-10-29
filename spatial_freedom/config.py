@@ -6,9 +6,10 @@ from PySide6.QtWidgets import QApplication
 
 class Config:
     autoshrink = True
-    text_width = 200
+    text_width = 300
     initial_position = (500, 40)
-    font_size = 7
+    # font sizes for each indent level
+    font_sizes = [12, 12, 12, 12, 10, 10, 10, 10, 8, 8, 8, 8]
     leader_key = ","
     # FPS = 60
     text_gap = 10

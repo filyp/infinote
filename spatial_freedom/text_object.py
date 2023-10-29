@@ -1,27 +1,16 @@
 import textwrap
-from time import sleep, time
 
 from config import Config
-from PySide6.QtCore import QPointF, Qt, QTimer
+from PySide6.QtCore import QPointF
 from PySide6.QtGui import (
     QColor,
     QFont,
     QFontMetrics,
-    QPainter,
-    QPixmap,
+    QTextBlockFormat,
     QTextCharFormat,
     QTextCursor,
 )
-from PySide6.QtWidgets import (
-    QApplication,
-    QGraphicsProxyWidget,
-    QGraphicsRectItem,
-    QGraphicsScene,
-    QGraphicsView,
-    QMainWindow,
-    QTextBrowser,
-    QTextEdit,
-)
+from PySide6.QtWidgets import QGraphicsProxyWidget, QTextEdit
 
 
 class NonSelectableTextEdit(QTextEdit):
@@ -62,8 +51,8 @@ class DraggableText(QGraphicsProxyWidget):
 
         self.text_box = NonSelectableTextEdit()
 
-        font = QFont("monospace", Config.font_size)
-        self.text_box.setFont(font)
+        # font = QFont("monospace", Config.font_sizes[0])
+        # self.text_box.setFont(font)
         self.text_box.setFixedWidth(Config.text_width)
 
         # make bg black, create a pale grey border
@@ -73,6 +62,9 @@ class DraggableText(QGraphicsProxyWidget):
             border: 1px solid {'#555' if self.filenum >= 0 else '#cc0'};
         """
         self.text_box.setStyleSheet(style)
+
+        doc = self.text_box.document()
+        doc.setIndentWidth(1)
 
         self.setWidget(self.text_box)
         self.update_text()
@@ -120,33 +112,6 @@ class DraggableText(QGraphicsProxyWidget):
         cursor.setPosition(end_pos, QTextCursor.KeepAnchor)
         cursor.mergeCharFormat(color_format)
 
-    def set_lines(self, lines):
-        wrapped_lines = []
-        for line in lines:
-            if line == "":
-                # add space so that cursor can be displayed there
-                wrapped_lines.append(" ")
-                continue
-            # # add a non-breaking space at both ends
-            # line = '\xa0' + line + '\xa0'
-            # wrapped_line = textwrap.fill(
-            #     line, width=20, subsequent_indent=" ", replace_whitespace=False
-            # )
-            # wrapped_line = wrapped_line.replace('\xa0', ' ')
-            # TODO
-            # this is tricky, because all the marks and curson also need to be wrapped
-            # I'd need a second "highlight layer" where non-space chars are some
-            # placeholder like "x", and colors are some other letters
-            #
-            # leave it for now, it's too buggy and only would be worth it if I were
-            # to do some funky stuff with text size shrink on indents
-
-            # for now just
-            wrapped_line = line
-            wrapped_lines.append(wrapped_line)
-        new_text = "\n".join(wrapped_lines)
-        self.text_box.setText(new_text)
-
     def get_plane_scale(self):
         if self.autoshrink:
             # euclidean magniture of plane_pos
@@ -164,32 +129,83 @@ class DraggableText(QGraphicsProxyWidget):
         self.place_down_children()
         self.place_right_children()
 
-    def update_text(self):
-        # set new text
-        lines = self.buffer[:]
-        self.set_lines(lines)
+    def _get_blocks(self):
+        doc = self.text_box.document()
+        block = doc.begin()
+        while block.isValid():
+            yield block
+            block = block.next()
 
-        # draw marks
+    def update_text(self):
+        lines = self.buffer[:]
+
+        # add space to empty lines so that cursor can be displayed there
+        for i, line in enumerate(lines):
+            if line == "":
+                lines[i] = " "
+
+        # set marks text (mainly for the leap plugin)
         buf_num = self.buffer.number
         marks = self.nvim.api.buf_get_extmarks(
             buf_num, -1, (0, 0), (-1, -1), {"details": True}
         )
-        positions = []
+        mark_positions = []
+        # print(f"\nmarks for buffer {buf_num}:")
         for _, y, x, details in marks:
+            # print(y, x, details)
             virt_text = details["virt_text"]
             assert len(virt_text) == 1, virt_text
             char, type_ = virt_text[0]
             if type_ == "Cursor":
                 continue
-            # TODO later relax this
+            # TODO later relax this?
             assert type_ == "LeapLabelPrimary", marks
             # put that char into text
             lines[y] = lines[y][:x] + char + lines[y][x + 1 :]
-            positions.append((y, x))
-        self.set_lines(lines)
+            mark_positions.append((y, x))
+
+        # set new text
+        new_text = "\n".join(lines)
+        self.text_box.setText(new_text)
+
+        # set the fancy formatting, with nice indents and decreasing font sizes
+        cursor = self.text_box.textCursor()
+        block_format = QTextBlockFormat()
+        for block in self._get_blocks():
+            line = block.text()
+            cursor.setPosition(block.position(), QTextCursor.MoveAnchor)
+            cursor.setPosition(block.position() + len(line), QTextCursor.KeepAnchor)
+
+            real_indent = len(line) - len(line.lstrip())
+            if line == " ":
+                # indent was added artificially
+                real_indent = 0
+
+            if real_indent < len(Config.font_sizes):
+                font_size = Config.font_sizes[real_indent]
+            else:
+                font_size = Config.font_sizes[-1]
+
+            font = QFont("monospace", font_size)
+            font_format = QTextCharFormat()
+            font_format.setFont(font)
+            cursor.setCharFormat(font_format)
+
+            indent_width = QFontMetrics(font).horizontalAdvance(" " * (2 + real_indent))
+            block_format.setIndent(indent_width)
+            block_format.setTextIndent(-indent_width)
+            cursor.setBlockFormat(block_format)
+
+            self.text_box.setTextCursor(cursor)
+
         # highlight the chars
-        for y, x in positions:
+        for y, x in mark_positions:
             self.highlight("orange", (y + 1, x + 1), (y + 1, x + 1))
+
+        # clear cursor
+        cursor.setPosition(0)
+        self.text_box.setTextCursor(cursor)
+        # cursor.setPosition(block.position() + len(line), QTextCursor.KeepAnchor)
 
         # set height
         height = self.text_box.document().size().height()
@@ -210,12 +226,12 @@ class DraggableText(QGraphicsProxyWidget):
         # set cursor
         curs_y, curs_x = self.nvim.current.window.cursor
         pos = self._yx_to_pos(curs_y, curs_x)
-        # get focus so that cursor is displayed
         cursor = self.text_box.textCursor()
         if mode == "n":
             cursor.setPosition(pos, QTextCursor.MoveAnchor)
             cursor.setPosition(pos + 1, QTextCursor.KeepAnchor)
         elif mode == "i":
+            # get focus so that cursor is displayed
             self.text_box.setFocus()
             cursor.setPosition(pos)
         self.text_box.setTextCursor(cursor)

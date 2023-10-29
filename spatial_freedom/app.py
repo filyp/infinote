@@ -50,7 +50,7 @@ from view import GraphicView
 # for >100 lines texts, I still may not be able to jump there
 #  https://github.com/ggandor/leap.nvim/issues/196
 # filenums of non-persistent texts should be None, not -1
-# 
+#
 # note: custom C-o and C-i only jump between buffers, but not to correct lines
 
 

@@ -109,7 +109,7 @@ class GraphicView(QGraphicsView):
             self.global_scale *= zoom_factor
 
             # reposition all texts
-            for text in self.get_texts():
+            for text in self.buf_handler.get_texts():
                 text.reposition()
 
     def msg(self, msg):

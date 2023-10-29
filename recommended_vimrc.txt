@@ -13,6 +13,7 @@ let g:bookmark_auto_save = 1
 " to free up <C-i> for jump forward (Ctrl+i is the same keycode as Tab)
 nnoremap ,f <Plug>Markdown_Fold
 
+" use spaces, not tabs, for correct indent displaying
 
 """"""""""""""""""""""""""""
 " optional

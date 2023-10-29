@@ -106,6 +106,25 @@ class KeyHandler:
                 self.command += event.text()
             return
 
+        # custom C-o and C-i, because normal ones create unwanted buffers
+        buf_handler = self.view.buf_handler
+        print(f"jumplist: {buf_handler.jumplist}")
+        print(f"forward_jumplist: {buf_handler.forward_jumplist}")
+        if mode == "n" and text == "<C-o>":
+            if len(buf_handler.jumplist) == 2:
+                return
+            current = buf_handler.jumplist.pop()
+            buf_handler.forward_jumplist.append(current)
+            self.nvim.command(f"buffer {buf_handler.jumplist[-1]}")
+            return
+        if mode == "n" and text == "<C-i>":
+            if len(buf_handler.forward_jumplist) == 0:
+                return
+            new = buf_handler.forward_jumplist.pop()
+            buf_handler.jumplist.append(new)
+            self.nvim.command(f"buffer {new}")
+            return
+
         # send that key
         self.nvim.input(text)
 

@@ -10,14 +10,10 @@ class BufferHandler:
         self.view = view
         self.last_file_num = 0
         self._buffer_to_text = {}
-        self.last_chosen_text = None
+        self.jumplist = [None]
+        self.forward_jumplist = []
 
     def get_num_unbound_buffers(self):
-        # print(f"len(self.nvim.buffers): {len(self.nvim.buffers)}")
-        # print(f"len(self._buffer_to_text): {len(self._buffer_to_text)}")
-        # for buffer in self.nvim.buffers:
-        #     print(buffer.number)
-        #     print(buffer[:])
         return len(self.nvim.buffers) - len(self._buffer_to_text)
 
     def open_filenum(self, pos, manual_scale, filenum, buffer=None):
@@ -69,6 +65,7 @@ class BufferHandler:
         # there are glitches when moving texts around
         # so redraw the background first (black)
         # TODO this does not work
+        # note: this happens only when maximized
 
         # delete empty texts
         for text in list(self.get_texts()):
@@ -84,11 +81,28 @@ class BufferHandler:
                 # detach
                 text.detach_parent()
                 text.detach_children()
+                # delete from jumplists
+                buf_num = text.buffer.number
+                self.jumplist = [x for x in self.jumplist if x != buf_num]
+                self.forward_jumplist = [
+                    x for x in self.forward_jumplist if x != buf_num
+                ]
+
                 del text
 
         # if hidden buffer focused, focus on the last chosen text
         if self.nvim.current.buffer not in self._buffer_to_text:
-            self.nvim.command(f"buffer {self.last_chosen_text.buffer.number}")
+            self.nvim.command(f"buffer {self.jumplist[-1]}")
+
+        # grow jumplist
+        current_buf = self.nvim.current.buffer
+        if (
+            current_buf.number != self.jumplist[-1]
+            and current_buf in self._buffer_to_text
+        ):
+            self.jumplist.append(current_buf.number)
+            self.forward_jumplist = []
+            self.jumplist = self.jumplist[-10:]
 
         # redraw
         for text in self.get_texts():

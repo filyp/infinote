@@ -23,7 +23,6 @@ from view import GraphicView
 
 # TODO
 # custom wrappint, extending height
-# custom C-o and C-i is needed, because jumping fucks up buffer list
 # look into syncing with syncthing
 #
 #
@@ -50,7 +49,9 @@ from view import GraphicView
 # unnamed buffers, created with piping something to vim, if they exist, they can fuck stuff up, binding gets incorrect
 # for >100 lines texts, I still may not be able to jump there
 #  https://github.com/ggandor/leap.nvim/issues/196
-#
+# filenums of non-persistent texts should be None, not -1
+# 
+# note: custom C-o and C-i only jump between buffers, but not to correct lines
 
 
 class MainWindow(QMainWindow):
@@ -106,6 +107,7 @@ if __name__ == "__main__":
         initial_x = Config.initial_position[0]
         w.view.global_scale = window_width / (initial_x * 2 + first_text_width)
         buf_handler.update_all_texts()
+    buf_handler.jumplist = [None]
 
     exit_code = app.exec()
     save_scene(w.view, savedir)

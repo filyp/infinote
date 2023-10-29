@@ -205,8 +205,6 @@ class DraggableText(QGraphicsProxyWidget):
         if self.nvim.current.buffer != self.buffer:
             return
 
-        self.view.buf_handler.last_chosen_text = self
-
         mode = self.nvim.api.get_mode()["mode"]
 
         # set cursor

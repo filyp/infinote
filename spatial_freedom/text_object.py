@@ -71,12 +71,55 @@ class DraggableText(QGraphicsProxyWidget):
 
     def mouseMoveEvent(self, event):
         # drag around
-        movevent = event.screenPos() - event.lastScreenPos()
-        self.plane_pos += movevent / self.view.global_scale
+        # mouse_start = QPointF(event.lastScreenPos() / self.view.global_scale)
+        # mouse_end = QPointF(event.screenPos() / self.view.global_scale)
+
+        # pos = QPointF(self.pos())
+        # mov = QPointF(mouse_end - mouse_start)
+        # c1 = QPointF(mouse_start - pos)
+        # dist = (c1.x() ** 2 + c1.y() ** 2) ** 0.5
+        # AB = pos + mov + c1
+        # KL = -c1 / dist
+        # A = AB.x()
+        # B = AB.y()
+        # K = KL.x()
+        # L = KL.y()
+        # print(A, B, K, L)
+        # a = L**2 + K**2 - 1
+        # b = 2 * A * K * L - 2 * B * (K**2 - 1)
+        # c = L**2 * A**2 + B**2 * (K**2 - 1) - 2 * A * B * K * L
+        # # fun fact:
+        # # copilot correctly guessed the completion: (K**2 - 1) - 2 * A * B * K * L
+        # delta = b**2 - 4 * a * c
+        # y = (-b + delta**0.5) / (2 * a)
+        # x = A + K / L * (y - B)
+        # print(x, y)
+        # self.plane_pos = QPointF(x, y)
+
+        # drag around
+        movement = event.screenPos() - event.lastScreenPos()
+        self.plane_pos += movement / self.view.global_scale
         self.reposition()
         self.view.dummy.setFocus()
 
         self.detach_parent()
+
+    def get_plane_scale(self):
+        if self.autoshrink:
+            # euclidean magniture of plane_pos
+            distance = (self.plane_pos.x() ** 2 + self.plane_pos.y() ** 2) ** 0.5
+            distance_scale = distance / Config.initial_position[0]
+            return self.manual_scale * distance_scale
+        else:
+            return self.manual_scale
+
+    def reposition(self):
+        global_scale = self.view.global_scale
+        self.setScale(self.get_plane_scale() * global_scale)
+        self.setPos(self.plane_pos * global_scale)
+
+        self.place_down_children()
+        self.place_right_children()
 
     def _yx_to_pos(self, y, x):
         # get the one number char position
@@ -111,23 +154,6 @@ class DraggableText(QGraphicsProxyWidget):
         cursor.setPosition(start_pos, QTextCursor.MoveAnchor)
         cursor.setPosition(end_pos, QTextCursor.KeepAnchor)
         cursor.mergeCharFormat(color_format)
-
-    def get_plane_scale(self):
-        if self.autoshrink:
-            # euclidean magniture of plane_pos
-            distance = (self.plane_pos.x() ** 2 + self.plane_pos.y() ** 2) ** 0.5
-            distance_scale = distance / Config.initial_position[0]
-            return self.manual_scale * distance_scale
-        else:
-            return self.manual_scale
-
-    def reposition(self):
-        global_scale = self.view.global_scale
-        self.setScale(self.get_plane_scale() * global_scale)
-        self.setPos(self.plane_pos * global_scale)
-
-        self.place_down_children()
-        self.place_right_children()
 
     def _get_blocks(self):
         doc = self.text_box.document()
@@ -200,7 +226,7 @@ class DraggableText(QGraphicsProxyWidget):
 
         # highlight the chars
         for y, x in mark_positions:
-            self.highlight("orange", (y + 1, x + 1), (y + 1, x + 1))
+            self.highlight("brown", (y + 1, x + 1), (y + 1, x + 1))
 
         # clear cursor
         cursor.setPosition(0)

@@ -22,17 +22,11 @@ from text_object import DraggableText
 from view import GraphicView
 
 # TODO
-# custom wrappint, extending height
 # look into syncing with syncthing
-#
 #
 # mid:
 # highlight search
 # save web of transitions with timestamps
-#
-# ? backups
-# ?:
-# nicer sizing, tweak the width/position of boxes
 
 # for more granular control of bookmarks, each group would need to be a separate folder?
 # but also separate nvim session, and I don't want that
@@ -42,10 +36,9 @@ from view import GraphicView
 # polish chars seem to break stuff, because they throuw position out of range,
 #     they are probably more chars than one
 # ? (have bookmarks per layer folder)
-# native node dragging would maybe be more efficient (there are cases with big text where it lags)
-# if stuff gets too heavy, move back to QTextBrowser, and just have some different color for insert cursor
-# solve those weird glitches when moving text around
+# if stuff gets too heavy, move back to QTextBrowser, and just have some different color for insert cursor?
 # dragging take correction for rescaling, keep mouse pos fixed on text pos
+# solve those weird glitches when moving text around
 # unnamed buffers, created with piping something to vim, if they exist, they can fuck stuff up, binding gets incorrect
 # for >100 lines texts, I still may not be able to jump there
 #  https://github.com/ggandor/leap.nvim/issues/196
@@ -59,9 +52,9 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.view = GraphicView(nvim)
         self.setCentralWidget(self.view)
-        # self.showMaximized()
+        self.showMaximized()
         # # not maximized, but 1000x1000
-        self.resize(1900, 600)
+        # self.resize(1900, 600)
         self.show()
 
 

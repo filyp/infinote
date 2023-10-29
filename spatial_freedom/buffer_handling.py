@@ -39,7 +39,7 @@ class BufferHandler:
         self.update_all_texts()
         return text
 
-    def create_text(self, pos, manual_scale=1.0):
+    def create_text(self, pos, manual_scale=Config.starting_box_scale):
         num_of_texts = len(self._buffer_to_text)
         if num_of_texts == len(self.nvim.buffers) or num_of_texts == 0:
             self.last_file_num += 1

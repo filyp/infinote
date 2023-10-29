@@ -13,6 +13,7 @@ class Config:
     leader_key = ","
     # FPS = 60
     text_gap = 10
+    starting_box_scale = 0.9
 
     # command keys after leader key
     #

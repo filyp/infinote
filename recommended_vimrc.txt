@@ -10,8 +10,6 @@ let g:bookmark_save_per_working_dir = 1
 let g:bookmark_auto_save = 1
 
 
-nnoremap ,j <Plug>(leap-from-window)
-
 " to free up <C-i> for jump forward (Ctrl+i is the same keycode as Tab)
 nnoremap ,f <Plug>Markdown_Fold
 

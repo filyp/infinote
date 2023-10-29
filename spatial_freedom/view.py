@@ -108,7 +108,7 @@ class GraphicView(QGraphicsView):
                 self.nvim.command(f"edit {filenum}.md")
             elif num_of_texts == len(self.nvim.buffers):
                 # create new file
-                self.nvim.command(f"split {filenum}.md")
+                self.nvim.command(f"tabnew {filenum}.md")
             buffer = self.nvim.current.buffer
         else:
             # buffer provided, so open it

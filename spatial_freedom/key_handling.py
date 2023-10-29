@@ -1,4 +1,9 @@
+from config import Config
 from PySide6.QtCore import Qt
+
+# # getting cmd output, but it's blocking:
+# out = self.nvim.command_output(self.command)
+# print(f"output: '{out}'")
 
 
 class KeyHandler:
@@ -8,6 +13,7 @@ class KeyHandler:
         self.command_mode = False
         self.search_mode = False
         self.backward_search_mode = False
+        self.leader_key_pressed = False
 
     def handle_key_event(self, event):
         special_keys = {
@@ -50,8 +56,20 @@ class KeyHandler:
         if mods or (key in special_keys):
             text = "<" + text + ">"
 
-        # monitor command and search input
         mode = self.nvim.api.get_mode()["mode"]
+        assert mode != "c", "there should be no way to get into command mode"
+
+        # handle custom commands
+        if self.leader_key_pressed:
+            self.leader_key_pressed = False
+            self.handle_custom_command(text)
+            return
+        if mode == "n" and text == Config.leader_key:
+            # custom leader key pressed
+            self.leader_key_pressed = True
+            return
+
+        # monitor command and search input
         if mode == "n":
             if text == "<S-:>" or text == ":":
                 self.command_mode = True
@@ -63,6 +81,7 @@ class KeyHandler:
                 self.backward_search_mode = True
                 return
         if self.command_mode or self.search_mode or self.backward_search_mode:
+            # eat the keypress into self.command
             if text == "<Esc>":
                 self.command_mode = False
                 self.search_mode = False
@@ -72,8 +91,7 @@ class KeyHandler:
                 self.command = self.command[:-1]
             elif text == "<CR>":
                 if self.command_mode:
-                    out = self.nvim.command_output(self.command)
-                    print(f"output: '{out}'")
+                    self.nvim.input(f":{self.command}<CR>")
                 elif self.search_mode:
                     self.nvim.input(f"/{self.command}<CR>")
                 elif self.backward_search_mode:
@@ -98,3 +116,14 @@ class KeyHandler:
             return "?" + self.command
         else:
             return ""
+
+    def handle_custom_command(self, cmd_char):
+        match cmd_char:
+            case Config.hop_key:
+                cmd = ":lua require('leap').leap { target_windows = vim.api.nvim_list_wins() }"
+                self.nvim.input(f":{cmd}<CR>")
+            case Config.bookmark_jump_key:
+                cmd = (
+                    '<Home>"fyt|f|<Right>"lyiw:buffer<Space><C-r>f<Enter>:<C-r>l<Enter>'
+                )
+                self.nvim.input(cmd)

@@ -22,15 +22,10 @@ from text_object import DraggableText
 from view import GraphicView
 
 # TODO
-# jump back from bookmarks by :buffer 4.md
-#
-# to some texts I can't jump, why??
-# because parts of buffer are not visible
-# and also some buffers can stop being displayed
-# https://github.com/ggandor/leap.nvim/issues/196
-# setting 10000 ui lines helps (temporarily) but there is a small lag
-# rigcz solution would be to have multiple windows, but this may break leap
 # gluing
+#   gaps, scaled
+#   don't rescale children
+# custom wrappint, extending height
 #
 # mid:
 # highlight search
@@ -47,13 +42,15 @@ from view import GraphicView
 # low:
 # polish chars seem to break stuff, because they throuw position out of range,
 #     they are probably more chars than one
-# custom wrappint, extending height
 # ? (have bookmarks per layer folder)
 # native node dragging would maybe be more efficient (there are cases with big text where it lags)
 # if stuff gets too heavy, move back to QTextBrowser, and just have some different color for insert cursor
 # solve those weird glitches when moving text around
 # dragging take correction for rescaling, keep mouse pos fixed on text pos
 # unnamed buffers, created with piping something to vim, if they exist, they can fuck stuff up, binding gets incorrect
+# for >100 lines texts, I still may not be able to jump there
+#  https://github.com/ggandor/leap.nvim/issues/196
+#
 
 
 class MainWindow(QMainWindow):
@@ -82,10 +79,8 @@ if __name__ == "__main__":
     nvim = pynvim.attach(
         "child", argv=["/usr/bin/env", "nvim", "--embed", "--headless"]
     )
-    # this is needed to create a lot of buffers in split
-    # TODO this is a hack though - better to have it in multiple windows
-    # and then somehow enable leaping through multiple windows? if that is possible?
-    nvim.ui_attach(80, 10000, True)
+    # text that doesn't fit in window can't be jumped to with Leap (for now)
+    nvim.ui_attach(80, 100, True)
     # nvim = pynvim.attach('socket', path='/tmp/nvim')
 
     app = QApplication(sys.argv)

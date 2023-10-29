@@ -24,7 +24,9 @@ def load_scene(view: QGraphicsView, savedir: Path):
         filenum = int(filename.stem)
         info = meta[str(filenum)]
         # create text
-        text = view.open_filenum(info["plane_pos"], info["manual_scale"], filenum)
+        text = view.buf_handler.open_filenum(
+            info["plane_pos"], info["manual_scale"], filenum
+        )
         filenum_to_text[filenum] = text
 
     # connect them
@@ -37,17 +39,17 @@ def load_scene(view: QGraphicsView, savedir: Path):
 
     # prepare the next file number
     max_filenum = max(int(f.stem) for f in files)
-    view.last_file_num = max_filenum
+    view.buf_handler.last_file_num = max_filenum
 
 
 def save_scene(view: QGraphicsView, savedir: Path):
     # save each text
-    for text in view.get_texts():
+    for text in view.buf_handler.get_texts():
         text.save()
 
     # save metadata json
     meta = dict(global_scale=view.global_scale)
-    for text in view.get_texts():
+    for text in view.buf_handler.get_texts():
         if text.filenum < 0:
             # this buffer was not created by this program, so don't save it
             continue

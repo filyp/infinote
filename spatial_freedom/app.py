@@ -22,10 +22,10 @@ from text_object import DraggableText
 from view import GraphicView
 
 # TODO
-# gluing
-#   gaps, scaled
-#   don't rescale children
 # custom wrappint, extending height
+# custom C-o and C-i is needed, because jumping fucks up buffer list
+# look into syncing with syncthing
+#
 #
 # mid:
 # highlight search
@@ -91,11 +91,13 @@ if __name__ == "__main__":
 
     assert len(nvim.buffers) == 1, "we require nvim to start with one buffer"
 
+    buf_handler = w.view.buf_handler
+
     try:
         load_scene(w.view, savedir)
     except AssertionError:
         # create one text
-        text = w.view.create_text(Config.initial_position)
+        text = buf_handler.create_text(Config.initial_position)
         first_text_width = (
             Config.text_width * text.get_plane_scale() * w.view.global_scale
         )
@@ -103,7 +105,7 @@ if __name__ == "__main__":
         # center it
         initial_x = Config.initial_position[0]
         w.view.global_scale = window_width / (initial_x * 2 + first_text_width)
-        w.view.update_texts()
+        buf_handler.update_all_texts()
 
     exit_code = app.exec()
     save_scene(w.view, savedir)

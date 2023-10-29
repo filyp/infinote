@@ -130,6 +130,6 @@ class KeyHandler:
                 )
                 self.nvim.input(cmd)
             case Config.create_child_down_key:
-                self.view.create_child("down")
+                self.view.buf_handler.create_child("down")
             case Config.create_child_right_key:
-                self.view.create_child("right")
+                self.view.buf_handler.create_child("right")

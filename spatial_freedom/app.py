@@ -96,7 +96,9 @@ if __name__ == "__main__":
     except AssertionError:
         # create one text
         text = w.view.create_text(Config.initial_position)
-        first_text_width = Config.text_width * text.get_scale()
+        first_text_width = (
+            Config.text_width * text.get_plane_scale() * w.view.global_scale
+        )
         window_width = w.view.screen().size().width()
         # center it
         initial_x = Config.initial_position[0]

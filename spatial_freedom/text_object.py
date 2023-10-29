@@ -2,7 +2,7 @@ import textwrap
 from time import sleep, time
 
 from config import Config
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import QPointF, Qt, QTimer
 from PySide6.QtGui import (
     QColor,
     QFont,
@@ -55,6 +55,10 @@ class DraggableText(QGraphicsProxyWidget):
         self.plane_pos = plane_pos
         self.manual_scale = manual_scale
         self.setScale(manual_scale)
+        self.child_down = None
+        self.child_right = None
+        self.parent = None
+        self._last_height = 0
 
         self.text_box = NonSelectableTextEdit()
 
@@ -80,10 +84,29 @@ class DraggableText(QGraphicsProxyWidget):
         self.reposition()
         self.view.dummy.setFocus()
 
+        self.detach_parent()
+
     def _yx_to_pos(self, y, x):
         # get the one number char position
         doc = self.text_box.document()
         return doc.findBlockByLineNumber(y - 1).position() + x
+
+    def detach_parent(self):
+        # detach from parent
+        if self.parent is not None:
+            if self.parent.child_down == self:
+                self.parent.child_down = None
+            elif self.parent.child_right == self:
+                self.parent.child_right = None
+            self.parent = None
+
+    def detach_children(self):
+        if self.child_down is not None:
+            self.child_down.parent = None
+            self.child_down = None
+        if self.child_right is not None:
+            self.child_right.parent = None
+            self.child_right = None
 
     def highlight(self, color_style, start, end):
         color_format = QTextCharFormat()
@@ -124,20 +147,22 @@ class DraggableText(QGraphicsProxyWidget):
         new_text = "\n".join(wrapped_lines)
         self.text_box.setText(new_text)
 
-    def get_scale(self):
-        global_scale = self.view.global_scale
+    def get_plane_scale(self):
         if self.autoshrink:
             # euclidean magniture of plane_pos
             distance = (self.plane_pos.x() ** 2 + self.plane_pos.y() ** 2) ** 0.5
             distance_scale = distance / Config.initial_position[0]
-            return self.manual_scale * global_scale * distance_scale
+            return self.manual_scale * distance_scale
         else:
-            return self.manual_scale * global_scale
+            return self.manual_scale
 
     def reposition(self):
         global_scale = self.view.global_scale
-        self.setScale(self.get_scale())
+        self.setScale(self.get_plane_scale() * global_scale)
         self.setPos(self.plane_pos * global_scale)
+
+        self.place_down_children()
+        self.place_right_children()
 
     def update_text(self):
         # set new text
@@ -166,9 +191,21 @@ class DraggableText(QGraphicsProxyWidget):
         for y, x in positions:
             self.highlight("orange", (y + 1, x + 1), (y + 1, x + 1))
 
+        # set height
+        height = self.text_box.document().size().height()
+        self.text_box.setFixedHeight(height + 2)
+
+        # place children
+        if height != self._last_height:
+            self._last_height = height
+            self.place_down_children()
+
+        ###################################################################
         # the rest if done only if this node's buffer is the current buffer
         if self.nvim.current.buffer != self.buffer:
             return
+
+        self.view.last_chosen_text = self
 
         mode = self.nvim.api.get_mode()["mode"]
 
@@ -206,9 +243,19 @@ class DraggableText(QGraphicsProxyWidget):
             for y in range(s[0], e[0] + 1):
                 self.highlight("gray", (y, x_start), (y, x_end))
 
-        # set height
-        height = self.text_box.document().size().height()
-        self.text_box.setFixedHeight(height + 2)
+    def place_down_children(self):
+        if self.child_down is not None:
+            height = self.get_plane_scale() * self.text_box.document().size().height()
+            gap = Config.text_gap * self.get_plane_scale()
+            self.child_down.plane_pos = self.plane_pos + QPointF(0, height + gap)
+            self.child_down.reposition()
+
+    def place_right_children(self):
+        if self.child_right is not None:
+            width = self.get_plane_scale() * self.text_box.document().size().width()
+            gap = Config.text_gap * self.get_plane_scale()
+            self.child_right.plane_pos = self.plane_pos + QPointF(width + gap, 0)
+            self.child_right.reposition()
 
     def save(self):
         if self.filenum < 0:

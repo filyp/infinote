@@ -7,8 +7,10 @@ from PySide6.QtCore import Qt
 
 
 class KeyHandler:
-    def __init__(self, nvim):
+    def __init__(self, nvim, view):
         self.nvim = nvim
+        self.view = view
+
         self.command = ""
         self.command_mode = False
         self.search_mode = False
@@ -127,3 +129,7 @@ class KeyHandler:
                     '<Home>"fyt|f|<Right>"lyiw:buffer<Space><C-r>f<Enter>:<C-r>l<Enter>'
                 )
                 self.nvim.input(cmd)
+            case Config.create_child_down_key:
+                self.view.create_child("down")
+            case Config.create_child_right_key:
+                self.view.create_child("right")

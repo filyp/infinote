@@ -31,6 +31,7 @@ from view import GraphicView
 # for more granular control of bookmarks, each group would need to be a separate folder?
 #  but also separate nvim session, and I don't want that
 #  ? but maybe this option could be set https://github.com/MattesGroeger/vim-bookmarks#bookmarks-per-buffer
+# make ** text bold
 #
 # mid:
 # if I even want to optimize, I shouldn't draw all the texts on each keypress

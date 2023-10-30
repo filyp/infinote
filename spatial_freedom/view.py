@@ -80,7 +80,7 @@ class GraphicView(QGraphicsView):
         item = self.scene().itemAt(event.screenPos(), self.transform())
         if isinstance(item, DraggableText):
             # clicked on text, so make it current
-            self.nvim.command(f"buffer {item.buffer.number}")
+            self.buf_handler.jump_to_buffer(item.buffer.number)
             self.buf_handler.update_all_texts()
         else:
             # clicked bg, so create a new text

@@ -7,9 +7,11 @@ from text_object import DraggableText
 class BufferHandler:
     def __init__(self, nvim, view):
         self.nvim = nvim
+
         self.view = view
         self.last_file_num = 0
         self._buffer_to_text = {}
+        self._buf_num_to_tab_num = {}
         self.jumplist = [None]
         self.forward_jumplist = []
 
@@ -35,9 +37,18 @@ class BufferHandler:
 
         text = DraggableText(self.nvim, buffer, filenum, self.view, pos, manual_scale)
         self.view.scene().addItem(text)
+
+        _tab_num = self.nvim.api.get_current_tabpage().number
+        self._buf_num_to_tab_num[buffer.number] = _tab_num
         self._buffer_to_text[buffer] = text
+
         self.update_all_texts()
         return text
+    
+    def jump_to_buffer(self, buf_num):
+        # jumping with ":buf <num>" would make some buffers hidden and break leap
+        tab_num = self._buf_num_to_tab_num[buf_num]
+        self.nvim.command(f"tabnext {tab_num}")
 
     def create_text(self, pos, manual_scale=Config.starting_box_scale):
         num_of_texts = len(self._buffer_to_text)
@@ -78,6 +89,7 @@ class BufferHandler:
                 self.nvim.command(f"bwipeout! {text.buffer.number}")
                 self.view.scene().removeItem(text)
                 self._buffer_to_text.pop(text.buffer)
+                self._buf_num_to_tab_num.pop(text.buffer.number)
                 # detach
                 text.detach_parent()
                 text.detach_children()
@@ -92,7 +104,7 @@ class BufferHandler:
 
         # if hidden buffer focused, focus on the last chosen text
         if self.nvim.current.buffer not in self._buffer_to_text:
-            self.nvim.command(f"buffer {self.jumplist[-1]}")
+            self.jump_to_buffer(self.jumplist[-1])
 
         # grow jumplist
         current_buf = self.nvim.current.buffer

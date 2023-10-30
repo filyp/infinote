@@ -22,16 +22,23 @@ from text_object import DraggableText
 from view import GraphicView
 
 # TODO
+# highlight bookmarks
+# record some demo
 # look into syncing with syncthing
+#  or using attach nvim with tcp
+#  everyone has their own folder
+#  :set nomodifiable  -  prevent even editing the buffer
 #
-# mid:
-# highlight search
-# save web of transitions with timestamps
-
 # for more granular control of bookmarks, each group would need to be a separate folder?
 # but also separate nvim session, and I don't want that
 # ? but maybe this option could be set https://github.com/MattesGroeger/vim-bookmarks#bookmarks-per-buffer
 #
+# mid:
+# if I even want to optimize, I shouldn't draw all the texts on each keypress
+#  instead draw onl the changed, and redraw the rest is s was pressed
+# highlight search
+# save web of transitions with timestamps
+
 # low:
 # polish chars seem to break stuff, because they throuw position out of range,
 #     they are probably more chars than one
@@ -70,12 +77,12 @@ if __name__ == "__main__":
     # change working directory to savedir
     os.chdir(savedir)
 
-    nvim = pynvim.attach(
-        "child", argv=["/usr/bin/env", "nvim", "--embed", "--headless"]
-    )
-    # text that doesn't fit in window can't be jumped to with Leap (for now)
-    nvim.ui_attach(80, 100, True)
-    # nvim = pynvim.attach('socket', path='/tmp/nvim')
+    # nvim = pynvim.attach(
+    #     "child", argv=["/usr/bin/env", "nvim", "--embed", "--headless"]
+    # )
+    # # text that doesn't fit in window can't be jumped to with Leap (for now)
+    # nvim.ui_attach(80, 100, True)
+    nvim = pynvim.attach('socket', path='/tmp/nvim')
 
     app = QApplication(sys.argv)
     w = MainWindow(nvim)

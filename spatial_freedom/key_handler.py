@@ -113,14 +113,14 @@ class KeyHandler:
                 return
             current = buf_handler.jumplist.pop()
             buf_handler.forward_jumplist.append(current)
-            self.nvim.command(f"buffer {buf_handler.jumplist[-1]}")
+            buf_handler.jump_to_buffer(buf_handler.jumplist[-1])
             return
         if mode == "n" and text == "<C-i>":
             if len(buf_handler.forward_jumplist) == 0:
                 return
             new = buf_handler.forward_jumplist.pop()
             buf_handler.jumplist.append(new)
-            self.nvim.command(f"buffer {new}")
+            buf_handler.jump_to_buffer(new)
             return
 
         # send that key

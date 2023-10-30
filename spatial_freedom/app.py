@@ -28,10 +28,9 @@ from view import GraphicView
 #  or using attach nvim with tcp
 #  everyone has their own folder
 #  :set nomodifiable  -  prevent even editing the buffer
-#
 # for more granular control of bookmarks, each group would need to be a separate folder?
-# but also separate nvim session, and I don't want that
-# ? but maybe this option could be set https://github.com/MattesGroeger/vim-bookmarks#bookmarks-per-buffer
+#  but also separate nvim session, and I don't want that
+#  ? but maybe this option could be set https://github.com/MattesGroeger/vim-bookmarks#bookmarks-per-buffer
 #
 # mid:
 # if I even want to optimize, I shouldn't draw all the texts on each keypress
@@ -59,9 +58,9 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.view = GraphicView(nvim)
         self.setCentralWidget(self.view)
-        self.showMaximized()
+        # self.showMaximized()
         # # not maximized, but 1000x1000
-        # self.resize(1900, 600)
+        self.resize(1900, 600)
         self.show()
 
 
@@ -77,12 +76,12 @@ if __name__ == "__main__":
     # change working directory to savedir
     os.chdir(savedir)
 
-    # nvim = pynvim.attach(
-    #     "child", argv=["/usr/bin/env", "nvim", "--embed", "--headless"]
-    # )
-    # # text that doesn't fit in window can't be jumped to with Leap (for now)
-    # nvim.ui_attach(80, 100, True)
-    nvim = pynvim.attach('socket', path='/tmp/nvim')
+    nvim = pynvim.attach(
+        "child", argv=["/usr/bin/env", "nvim", "--embed", "--headless"]
+    )
+    # text that doesn't fit in window can't be jumped to with Leap (for now)
+    nvim.ui_attach(80, 100, True)
+    # nvim = pynvim.attach('socket', path='/tmp/nvim')
 
     app = QApplication(sys.argv)
     w = MainWindow(nvim)
@@ -107,7 +106,7 @@ if __name__ == "__main__":
         initial_x = Config.initial_position[0]
         w.view.global_scale = window_width / (initial_x * 2 + first_text_width)
         buf_handler.update_all_texts()
-    buf_handler.jumplist = [None]
+    buf_handler.jumplist = [nvim.current.buffer.number]
 
     exit_code = app.exec()
     save_scene(w.view, savedir)

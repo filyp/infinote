@@ -72,16 +72,6 @@ class KeyHandler:
             return
 
         # monitor command and search input
-        if mode == "n":
-            if text == "<S-:>" or text == ":":
-                self.command_mode = True
-                return
-            elif text == "/":
-                self.search_mode = True
-                return
-            elif text in ["<S-/>", "<S-?>", "?"]:
-                self.backward_search_mode = True
-                return
         if self.command_mode or self.search_mode or self.backward_search_mode:
             # eat the keypress into self.command
             if text == "<Esc>":
@@ -105,6 +95,16 @@ class KeyHandler:
             elif event.text():
                 self.command += event.text()
             return
+        elif mode == "n":
+            if text == "<S-:>" or text == ":":
+                self.command_mode = True
+                return
+            elif text == "/":
+                self.search_mode = True
+                return
+            elif text in ["<S-/>", "<S-?>", "?"]:
+                self.backward_search_mode = True
+                return
 
         # custom C-o and C-i, because normal ones create unwanted buffers
         buf_handler = self.view.buf_handler

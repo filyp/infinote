@@ -33,7 +33,10 @@ class BufferHandler:
             buffer = self.nvim.current.buffer
         else:
             # buffer provided, so open it
-            assert type(buffer) == pynvim.api.buffer.Buffer
+            self.nvim.command("tabnew")
+            self.nvim.command(f"buffer {buffer.number}")
+            # delete the buffer that was created by tabnew
+            self.nvim.command("bwipeout! #")
 
         text = DraggableText(self.nvim, buffer, filenum, self.view, pos, manual_scale)
         self.view.scene().addItem(text)
@@ -44,10 +47,11 @@ class BufferHandler:
 
         self.update_all_texts()
         return text
-    
+
     def jump_to_buffer(self, buf_num):
         # jumping with ":buf <num>" would make some buffers hidden and break leap
         tab_num = self._buf_num_to_tab_num[buf_num]
+
         self.nvim.command(f"tabnext {tab_num}")
 
     def create_text(self, pos, manual_scale=Config.starting_box_scale):
@@ -101,6 +105,21 @@ class BufferHandler:
                 ]
 
                 del text
+
+        # make sure each tab has exactly one buffer
+        for tab in self._buf_num_to_tab_num.values():
+            # get the num of buffers in this tab
+            wins = self.nvim.api.tabpage_list_wins(tab)
+            if len(wins) == 1:
+                continue
+            bufs_in_tab = {self.nvim.api.win_get_buf(win): win for win in wins}
+            unbound_bufs = [
+                buf for buf in bufs_in_tab if buf not in self._buffer_to_text
+            ]
+            for unb_buf in unbound_bufs:
+                # delete its window
+                win = bufs_in_tab[unb_buf]
+                self.nvim.api.win_close(win, True)
 
         # if hidden buffer focused, focus on the last chosen text
         if self.nvim.current.buffer not in self._buffer_to_text:

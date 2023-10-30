@@ -1,4 +1,5 @@
 import textwrap
+import time
 from pathlib import Path
 
 from config import Config
@@ -48,8 +49,12 @@ class DraggableText(QGraphicsProxyWidget):
         self.child_down = None
         self.child_right = None
         self.parent = None
-        self._last_height = 0
         self.pin_pos = None
+
+        self._last_height = 0
+        self._last_text = ""
+        self._last_marks = False
+        self._last_current = False
 
         self.text_box = NonSelectableTextEdit()
 
@@ -148,7 +153,23 @@ class DraggableText(QGraphicsProxyWidget):
             block = block.next()
 
     def update_text(self):
+        # first, decide whether we need to redraw
         lines = self.buffer[:]
+        marks = self.nvim.api.buf_get_extmarks(
+            self.buffer.number, -1, (0, 0), (-1, -1), {"details": True}
+        )
+        if not (
+            lines != self._last_text
+            or self.nvim.current.buffer == self.buffer
+            or marks != []
+            or self._last_marks
+            or self._last_current
+        ):
+            # no need for redraw
+            return
+        self._last_text = lines.copy()
+        self._last_marks = marks != []
+        self._last_current = self.nvim.current.buffer == self.buffer
 
         # add space to empty lines so that cursor can be displayed there
         for i, line in enumerate(lines):
@@ -156,9 +177,6 @@ class DraggableText(QGraphicsProxyWidget):
                 lines[i] = " "
 
         # set marks text (mainly for the leap plugin)
-        marks = self.nvim.api.buf_get_extmarks(
-            self.buffer.number, -1, (0, 0), (-1, -1), {"details": True}
-        )
         mark_positions = []
         for _, y, x, details in marks:
             virt_text = details["virt_text"]
@@ -167,7 +185,7 @@ class DraggableText(QGraphicsProxyWidget):
             if type_ == "Cursor":
                 continue
             # TODO later relax this?
-            assert type_ == "LeapLabelPrimary", marks
+            assert type_ == "LeapLabelPrimary" or type_ == "LeapLabelSecondary", marks
             # put that char into text
             lines[y] = lines[y][:x] + char + lines[y][x + 1 :]
             mark_positions.append((y, x))

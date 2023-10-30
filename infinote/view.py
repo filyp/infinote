@@ -97,7 +97,8 @@ class GraphicView(QGraphicsView):
         self._render_status_bar()
 
     def wheelEvent(self, event):
-        zoom_factor = 1.0005 ** event.angleDelta().y()
+        direction = -1 if Config.scroll_invert else 1
+        zoom_factor = 1.0005 ** (event.angleDelta().y() * direction)
 
         item = self.scene().itemAt(event.position(), self.transform())
         if isinstance(item, DraggableText):

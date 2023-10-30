@@ -181,14 +181,11 @@ class DraggableText(QGraphicsProxyWidget):
                 lines[i] = " "
 
         # set marks text (mainly for the leap plugin)
-        buf_num = self.buffer.number
         marks = self.nvim.api.buf_get_extmarks(
-            buf_num, -1, (0, 0), (-1, -1), {"details": True}
+            self.buffer.number, -1, (0, 0), (-1, -1), {"details": True}
         )
         mark_positions = []
-        # print(f"\nmarks for buffer {buf_num}:")
         for _, y, x, details in marks:
-            # print(y, x, details)
             virt_text = details["virt_text"]
             assert len(virt_text) == 1, virt_text
             char, type_ = virt_text[0]
@@ -214,7 +211,7 @@ class DraggableText(QGraphicsProxyWidget):
 
             real_indent = len(line) - len(line.lstrip())
             if line == " ":
-                # indent was added artificially
+                # indent was added artificially, (not strictly true, but it's ok)
                 real_indent = 0
 
             if real_indent < len(Config.font_sizes):
@@ -241,11 +238,11 @@ class DraggableText(QGraphicsProxyWidget):
         # clear cursor
         cursor.setPosition(0)
         self.text_box.setTextCursor(cursor)
-        # cursor.setPosition(block.position() + len(line), QTextCursor.KeepAnchor)
 
         # set height
-        height = self.text_box.document().size().height()
-        self.text_box.setFixedHeight(height + 2)
+        height = self.text_box.document().size().height() + 2
+        height = min(height, Config.text_max_height)
+        self.text_box.setFixedHeight(height)
 
         # place children
         if height != self._last_height:

@@ -109,7 +109,7 @@ class KeyHandler:
         # custom C-o and C-i, because normal ones create unwanted buffers
         buf_handler = self.view.buf_handler
         if mode == "n" and text == "<C-o>":
-            if len(buf_handler.jumplist) == 2:
+            if len(buf_handler.jumplist) <= 1:
                 return
             current = buf_handler.jumplist.pop()
             buf_handler.forward_jumplist.append(current)

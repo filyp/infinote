@@ -24,9 +24,9 @@ class Config:
     # when in bookmarks window, jump to location of bookmark under cursor
     bookmark_jump_key = "b"
     # create a child of the current text box, down of it
-    create_child_down_key = "/"
+    create_child_down_key = "<Space>"
     # create a child of the current text box, right of it
-    create_child_right_key = "o"
+    create_child_right_key = "."
 
     # closer to 1 is slower
     scroll_speed = 1.0005

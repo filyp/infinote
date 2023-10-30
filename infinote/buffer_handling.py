@@ -11,11 +11,9 @@ class BufferHandler:
         self.nvim = nvim
 
         self.view = view
-        # defaultdict use for last file nums
+        self.jumplist = [None]  # must be set by view
         self.last_file_nums = defaultdict(lambda: 0)
         self._buffer_to_text = {}
-        self._buf_num_to_tab_num = {}
-        self.jumplist = [None]
         self.forward_jumplist = []
         self.savedir_indexes = {}
 
@@ -48,7 +46,6 @@ class BufferHandler:
         self.view.scene().addItem(text)
 
         _tab_num = self.nvim.api.get_current_tabpage().number
-        self._buf_num_to_tab_num[buffer.number] = _tab_num
         self._buffer_to_text[buffer] = text
 
         self.update_all_texts()
@@ -56,8 +53,16 @@ class BufferHandler:
 
     def jump_to_buffer(self, buf_num):
         # jumping with ":buf <num>" would make some buffers hidden and break leap
-        tab_num = self._buf_num_to_tab_num[buf_num]
-
+        tab_num = None
+        for tab in self.nvim.api.list_tabpages():
+            wins = self.nvim.api.tabpage_list_wins(tab)
+            assert len(wins) == 1, "each tab must have exactly one window"
+            candidate_buf_num = self.nvim.api.win_get_buf(wins[0]).number
+            if candidate_buf_num == buf_num:
+                # found it
+                tab_num = tab.number
+                break
+        assert tab_num is not None, "buffer not found"
         self.nvim.command(f"tabnext {tab_num}")
 
     def create_text(self, savedir, pos, manual_scale=Config.starting_box_scale):
@@ -100,7 +105,6 @@ class BufferHandler:
                 self.nvim.command(f"bwipeout! {text.buffer.number}")
                 self.view.scene().removeItem(text)
                 self._buffer_to_text.pop(text.buffer)
-                self._buf_num_to_tab_num.pop(text.buffer.number)
                 # detach
                 text.detach_parent()
                 text.detach_children()
@@ -114,7 +118,7 @@ class BufferHandler:
                 del text
 
         # make sure each tab has exactly one buffer
-        for tab in self._buf_num_to_tab_num.values():
+        for tab in self.nvim.api.list_tabpages():
             # get the num of buffers in this tab
             wins = self.nvim.api.tabpage_list_wins(tab)
             if len(wins) == 1:

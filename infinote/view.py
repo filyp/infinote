@@ -18,7 +18,7 @@ from text_object import DraggableText
 
 
 class GraphicView(QGraphicsView):
-    def __init__(self, nvim, parent=None):
+    def __init__(self, nvim, savedirs, parent=None):
         super().__init__(parent)
         self.nvim = nvim
         self.setRenderHint(QPainter.Antialiasing)
@@ -32,6 +32,8 @@ class GraphicView(QGraphicsView):
         self.global_scale = 1.0
         self.key_handler = KeyHandler(nvim, self)
         self.buf_handler = BufferHandler(nvim, self)
+        self.savedirs = savedirs
+        self.current_folder = savedirs[0]
 
         # note: this bg may be unnecessary (dummy object is necessary though)
         # create a black background taking up all the space, to cover up glitches
@@ -82,9 +84,15 @@ class GraphicView(QGraphicsView):
             # clicked on text, so make it current
             self.buf_handler.jump_to_buffer(item.buffer.number)
             self.buf_handler.update_all_texts()
+
+            # pin the click position, in case of dragging
+            click_pos = event.screenPos() / self.global_scale
+            item.pin_pos = (click_pos - item.plane_pos) / item.get_plane_scale()
         else:
             # clicked bg, so create a new text
-            self.buf_handler.create_text(event.screenPos() / self.global_scale)
+            self.buf_handler.create_text(
+                self.current_folder, event.screenPos() / self.global_scale
+            )
 
         super().mousePressEvent(event)
         self.dummy.setFocus()

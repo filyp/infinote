@@ -1,64 +1,81 @@
 import json
 from pathlib import Path
+from typing import List
 
 from PySide6.QtWidgets import QGraphicsView
 
 
-def load_scene(view: QGraphicsView, savedir: Path):
-    # if there is at least one markdown file, open it
-    # names must be integers
-    meta_path = savedir / "meta.json"
-    files = [f for f in savedir.iterdir() if f.suffix == ".md" and f.stem.isnumeric()]
+def load_scene(view: QGraphicsView, savedirs: Path):
+    loaded_any_folder = False
+    filename_to_text = {}
+    global_meta = {}
+    for savedir in savedirs:
+        # if there is at least one markdown file, open it
+        # names must be integers
+        meta_path = savedir / "meta.json"
+        files = [
+            f for f in savedir.iterdir() if f.suffix == ".md" and f.stem.isnumeric()
+        ]
 
-    assert files != [] and meta_path.exists(), "No files to load"
+        if files == [] or not meta_path.exists():
+            print(f"no markdown files in {savedir}")
+            continue
+        loaded_any_folder = True
 
-    # load all
+        # load all
 
-    meta = json.loads(meta_path.read_text())
-    view.global_scale = meta["global_scale"]
+        meta = json.loads(meta_path.read_text())
+        view.global_scale = meta["global_scale"]
+        global_meta.update(meta)
 
-    filenum_to_text = {}
+        # load them into buffers
+        for full_filename in files:
+            # get the full filename, but relative
+            filename = full_filename.as_posix()
+            info = meta[filename]
+            # create text
+            text = view.buf_handler.open_filename(
+                info["plane_pos"], info["manual_scale"], filename
+            )
+            filename_to_text[filename] = text
 
-    # load them into buffers
-    for filename in files:
-        filenum = int(filename.stem)
-        info = meta[str(filenum)]
-        # create text
-        text = view.buf_handler.open_filenum(
-            info["plane_pos"], info["manual_scale"], filenum
-        )
-        filenum_to_text[filenum] = text
+        # prepare the next file number
+        max_filenum = max(int(f.stem) for f in files)
+        view.buf_handler.last_file_nums[savedir] = max_filenum
 
     # connect them
-    for text in filenum_to_text.values():
-        info = meta[str(text.filenum)]
-        # note that some filenum pointers can be -1, but they will be ignored
-        text.child_down = filenum_to_text.get(info["child_down"])
-        text.child_right = filenum_to_text.get(info["child_right"])
-        text.parent = filenum_to_text.get(info["parent"])
+    for text in filename_to_text.values():
+        info = global_meta[text.filename]
+        text.child_down = filename_to_text.get(info["child_down"])
+        text.child_right = filename_to_text.get(info["child_right"])
+        text.parent = filename_to_text.get(info["parent"])
 
-    # prepare the next file number
-    max_filenum = max(int(f.stem) for f in files)
-    view.buf_handler.last_file_num = max_filenum
+    assert loaded_any_folder, "no markdown files found in any folder"
 
 
-def save_scene(view: QGraphicsView, savedir: Path):
+def save_scene(view: QGraphicsView, savedirs: List[Path]):
     # save each text
     for text in view.buf_handler.get_texts():
         text.save()
 
-    # save metadata json
-    meta = dict(global_scale=view.global_scale)
+    # build metadata jsons
+    metas = {savedir: dict(global_scale=view.global_scale) for savedir in savedirs}
+
     for text in view.buf_handler.get_texts():
-        if text.filenum < 0:
+        if text.filename is None:
             # this buffer was not created by this program, so don't save it
             continue
-        meta[text.filenum] = dict(
+        savedir = Path(text.filename).parent
+        meta = metas[savedir]
+        meta[text.filename] = dict(
             plane_pos=tuple(text.plane_pos.toTuple()),
             manual_scale=text.manual_scale,
-            child_down=text.child_down.filenum if text.child_down else None,
-            child_right=text.child_right.filenum if text.child_right else None,
-            parent=text.parent.filenum if text.parent else None,
+            child_down=text.child_down.filename if text.child_down else None,
+            child_right=text.child_right.filename if text.child_right else None,
+            parent=text.parent.filename if text.parent else None,
         )
-    meta_path = Path("meta.json")
-    meta_path.write_text(json.dumps(meta, indent=4))
+
+    # save metadata jsons
+    for savedir, meta in metas.items():
+        meta_path = savedir / "meta.json"
+        meta_path.write_text(json.dumps(meta, indent=4))

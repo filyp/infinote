@@ -14,6 +14,8 @@ class Config:
     # font sizes for each indent level
     font_sizes = [12, 12, 12, 12, 10, 10, 10, 10, 8, 8, 8, 8]
 
+    dir_colors = ["#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF", "#FF00FF"]
+
     leader_key = ","
     # command keys after leader key
     #

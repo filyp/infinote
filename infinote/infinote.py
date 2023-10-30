@@ -49,15 +49,14 @@ from view import GraphicView
 # unnamed buffers, created with piping something to vim, if they exist, they can fuck stuff up, binding gets incorrect
 # for >100 lines texts, I still may not be able to jump there
 #  https://github.com/ggandor/leap.nvim/issues/196
-# filenums of non-persistent texts should be None, not -1
 #
 # note: custom C-o and C-i only jump between buffers, but not to correct lines
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, nvim):
+    def __init__(self, view):
         super().__init__()
-        self.view = GraphicView(nvim)
+        self.view = view
         self.setCentralWidget(self.view)
         # self.showMaximized()
         # # not maximized, but 1000x1000
@@ -70,12 +69,9 @@ def nvim_notification(method, args):
 
 
 if __name__ == "__main__":
-    savedir = Path(sys.argv[1])
-    savedir = savedir.absolute()
-    savedir.mkdir(parents=True, exist_ok=True)
-
-    # change working directory to savedir
-    os.chdir(savedir)
+    savedirs = [Path(pathname) for pathname in sys.argv[1:]]
+    for savedir in savedirs:
+        savedir.mkdir(parents=True, exist_ok=True)
 
     nvim = pynvim.attach(
         "child", argv=["/usr/bin/env", "nvim", "--embed", "--headless"]
@@ -85,30 +81,32 @@ if __name__ == "__main__":
     # nvim = pynvim.attach('socket', path='/tmp/nvim')
 
     app = QApplication(sys.argv)
-    w = MainWindow(nvim)
+    view = GraphicView(nvim, savedirs)
+    w = MainWindow(view)
 
     # make the cursor non-blinking
     app.setCursorFlashTime(0)
 
     assert len(nvim.buffers) == 1, "we require nvim to start with one buffer"
 
-    buf_handler = w.view.buf_handler
+    buf_handler = view.buf_handler
+    buf_handler.savedir_indexes = {savedir: i for i, savedir in enumerate(savedirs)}
 
     try:
-        load_scene(w.view, savedir)
+        load_scene(view, savedirs)
     except AssertionError:
         # create one text
-        text = buf_handler.create_text(Config.initial_position)
+        text = buf_handler.create_text(savedirs[0], Config.initial_position)
         first_text_width = (
-            Config.text_width * text.get_plane_scale() * w.view.global_scale
+            Config.text_width * text.get_plane_scale() * view.global_scale
         )
-        window_width = w.view.screen().size().width()
+        window_width = view.screen().size().width()
         # center it
         initial_x = Config.initial_position[0]
-        w.view.global_scale = window_width / (initial_x * 2 + first_text_width)
+        view.global_scale = window_width / (initial_x * 2 + first_text_width)
         buf_handler.update_all_texts()
     buf_handler.jumplist = [nvim.current.buffer.number]
 
     exit_code = app.exec()
-    save_scene(w.view, savedir)
+    save_scene(view, savedirs)
     sys.exit(exit_code)

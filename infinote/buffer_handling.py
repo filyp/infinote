@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import pynvim
 from config import Config
 from PySide6.QtCore import QPointF, Qt, QTimer
@@ -9,36 +11,40 @@ class BufferHandler:
         self.nvim = nvim
 
         self.view = view
-        self.last_file_num = 0
+        # defaultdict use for last file nums
+        self.last_file_nums = defaultdict(lambda: 0)
         self._buffer_to_text = {}
         self._buf_num_to_tab_num = {}
         self.jumplist = [None]
         self.forward_jumplist = []
+        self.savedir_indexes = {}
 
     def get_num_unbound_buffers(self):
         return len(self.nvim.buffers) - len(self._buffer_to_text)
 
-    def open_filenum(self, pos, manual_scale, filenum, buffer=None):
+    def open_filename(self, pos, manual_scale, filename=None, buffer=None):
         if isinstance(pos, (tuple, list)):
             pos = QPointF(*pos)
 
-        if buffer is None:
-            # no buffer provided, so open the one with the given filenum
+        if buffer is None and filename is not None:
+            # no buffer provided, so open the one with the given filename
             num_of_texts = len(self._buffer_to_text)
             if num_of_texts == 0:
-                self.nvim.command(f"edit {filenum}.md")
+                self.nvim.command(f"edit {filename}")
             elif num_of_texts == len(self.nvim.buffers):
                 # create new file
-                self.nvim.command(f"tabnew {filenum}.md")
+                self.nvim.command(f"tabnew {filename}")
             buffer = self.nvim.current.buffer
-        else:
+        elif buffer is not None and filename is None:
             # buffer provided, so open it
             self.nvim.command("tabnew")
             self.nvim.command(f"buffer {buffer.number}")
             # delete the buffer that was created by tabnew
             self.nvim.command("bwipeout! #")
+        else:
+            raise ValueError("either buffer or filename must be provided")
 
-        text = DraggableText(self.nvim, buffer, filenum, self.view, pos, manual_scale)
+        text = DraggableText(self.nvim, buffer, filename, self.view, pos, manual_scale)
         self.view.scene().addItem(text)
 
         _tab_num = self.nvim.api.get_current_tabpage().number
@@ -54,20 +60,21 @@ class BufferHandler:
 
         self.nvim.command(f"tabnext {tab_num}")
 
-    def create_text(self, pos, manual_scale=Config.starting_box_scale):
+    def create_text(self, savedir, pos, manual_scale=Config.starting_box_scale):
         num_of_texts = len(self._buffer_to_text)
         if num_of_texts == len(self.nvim.buffers) or num_of_texts == 0:
-            self.last_file_num += 1
-            return self.open_filenum(pos, manual_scale, self.last_file_num)
+            self.last_file_nums[savedir] += 1
+            filename = f"{savedir}/{self.last_file_nums[savedir]}.md"
+            return self.open_filename(pos, manual_scale, filename)
 
         # some buffer was created some other way than calling create_text,
         # so mark it to not be saved
-        filenum = -1
+        filename = None
 
         # get the unused buffer
         for buf in self.nvim.buffers:
             if buf not in self._buffer_to_text:
-                return self.open_filenum(pos, manual_scale, filenum, buf)
+                return self.open_filename(pos, manual_scale, filename, buf)
         raise RuntimeError("no unused buffer found")
 
     def update_all_texts(self):
@@ -88,8 +95,8 @@ class BufferHandler:
                 # current buffer can be empty
                 continue
             if text.buffer[:] == [""] or not text.buffer[:]:
-                if text.filenum >= 0:
-                    self.nvim.command(f"call delete('{text.filenum}.md')")
+                if text.filename is not None:
+                    self.nvim.command(f"call delete('{text.filename}')")
                 self.nvim.command(f"bwipeout! {text.buffer.number}")
                 self.view.scene().removeItem(text)
                 self._buffer_to_text.pop(text.buffer)
@@ -149,7 +156,7 @@ class BufferHandler:
     def create_child(self, side):
         current_text = self._get_current_text()
 
-        if current_text.filenum < 0:
+        if current_text.filename is None:
             # it's not a persistent buffer, so it shouldn't have children
             self.view.msg("can't create children for non-persistent buffers")
             return
@@ -158,13 +165,13 @@ class BufferHandler:
             if current_text.child_right is not None:
                 self.view.msg("right child already exists")
                 return
-            child = self.create_text((0, 0))
+            child = self.create_text(self.view.current_folder, (0, 0))
             current_text.child_right = child
         elif side == "down":
             if current_text.child_down is not None:
                 self.view.msg("down child already exists")
                 return
-            child = self.create_text((0, 0))
+            child = self.create_text(self.view.current_folder, (0, 0))
             current_text.child_down = child
         else:
             raise ValueError("side must be 'right' or 'down'")

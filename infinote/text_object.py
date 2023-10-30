@@ -1,7 +1,8 @@
 import textwrap
+from pathlib import Path
 
 from config import Config
-from PySide6.QtCore import QPointF
+from PySide6.QtCore import QPoint, QPointF
 from PySide6.QtGui import (
     QColor,
     QFont,
@@ -31,7 +32,7 @@ class NonSelectableTextEdit(QTextEdit):
 
 
 class DraggableText(QGraphicsProxyWidget):
-    def __init__(self, nvim, buffer_handle, filenum, view, plane_pos, manual_scale=1.0):
+    def __init__(self, nvim, buffer_handle, filename, view, plane_pos, manual_scale):
         super().__init__()
 
         self.autoshrink = Config.autoshrink
@@ -39,7 +40,7 @@ class DraggableText(QGraphicsProxyWidget):
         # note that num doesn't need to be the same as buffer_handle.number
         self.nvim = nvim
         self.buffer = buffer_handle
-        self.filenum = filenum
+        self.filename = filename
         self.view = view
         self.plane_pos = plane_pos
         self.manual_scale = manual_scale
@@ -48,6 +49,7 @@ class DraggableText(QGraphicsProxyWidget):
         self.child_right = None
         self.parent = None
         self._last_height = 0
+        self.pin_pos = None
 
         self.text_box = NonSelectableTextEdit()
 
@@ -55,11 +57,18 @@ class DraggableText(QGraphicsProxyWidget):
         # self.text_box.setFont(font)
         self.text_box.setFixedWidth(Config.text_width)
 
+        if filename is None:
+            # it's non-persistent buffer, so mark its border yellow
+            dir_color = "#cc0"
+        else:
+            savedir = Path(filename).parent
+            savedir_index = self.view.buf_handler.savedir_indexes[savedir]
+            savedir_index %= len(Config.dir_colors)
+            dir_color = Config.dir_colors[savedir_index]
         # make bg black, create a pale grey border
-        # if filenum<0, it's non-persistent buffer, so mark it's border yellow
         style = f"""
             background-color: black; color: white;
-            border: 1px solid {'#555' if self.filenum >= 0 else '#cc0'};
+            border: 1px solid {dir_color};
         """
         self.text_box.setStyleSheet(style)
 
@@ -71,43 +80,9 @@ class DraggableText(QGraphicsProxyWidget):
 
     def mouseMoveEvent(self, event):
         # drag around
-        # mouse_start = QPointF(event.lastScreenPos() / self.view.global_scale)
-        # mouse_end = QPointF(event.screenPos() / self.view.global_scale)
-
-        # pos = QPointF(self.pos())
-        # mov = QPointF(mouse_end - mouse_start)
-        # c1 = QPointF(mouse_start - pos)
-        # dist = (c1.x() ** 2 + c1.y() ** 2) ** 0.5
-        # AB = pos + mov + c1
-        # KL = -c1 / dist
-        # A = AB.x()
-        # B = AB.y()
-        # K = KL.x()
-        # L = KL.y()
-        # print(A, B, K, L)
-        # a = L**2 + K**2 - 1
-        # b = 2 * A * K * L - 2 * B * (K**2 - 1)
-        # c = L**2 * A**2 + B**2 * (K**2 - 1) - 2 * A * B * K * L
-        # # fun fact:
-        # # copilot correctly guessed the completion: (K**2 - 1) - 2 * A * B * K * L
-        # delta = b**2 - 4 * a * c
-        # y = (-b + delta**0.5) / (2 * a)
-        # x = A + K / L * (y - B)
-        # print(x, y)
-        # self.plane_pos = QPointF(x, y)
-        scale1 = self.get_plane_scale()
-
-        # drag around
-        mouse_start = event.lastScreenPos() / self.view.global_scale
-        mouse_end = event.screenPos() / self.view.global_scale
-        movement = mouse_end - mouse_start
-        self.plane_pos += movement
-
-        # pos = QPointF(event.pos())
-        # c1 = mouse_start - pos
-        # scale2 = self.get_plane_scale()
-        # self.plane_pos = pos + movement + c1 - c1 * scale2 / scale1
-        # print(pos, movement, c1, scale1, scale2)
+        mouse_end = QPointF(event.screenPos() / self.view.global_scale)
+        displacement = self.get_plane_scale() * self.pin_pos
+        self.plane_pos = mouse_end - displacement
 
         self.reposition()
         self.view.dummy.setFocus()
@@ -305,9 +280,17 @@ class DraggableText(QGraphicsProxyWidget):
             self.child_right.reposition()
 
     def save(self):
-        if self.filenum < 0:
+        if self.filename is None:
             # this buffer was not created by this program, so don't save it
             return
+
+        # take the actual filename from the buffer
+        buf_filename = self.buffer.name
+        # make it relative to Path.cwd()
+        buf_filename = Path(buf_filename).relative_to(Path.cwd()).as_posix()
+        # make sure the actual filename is the same as given one
+        assert buf_filename == self.filename, (buf_filename, self.filename)
+
         # set this buffer as current
         self.nvim.api.set_current_buf(self.buffer.number)
         # save it

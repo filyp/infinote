@@ -22,7 +22,11 @@ from text_object import DraggableText
 from view import GraphicView
 
 # TODO
-# highlight bookmarks
+# save current text to meta
+# optimize update_all_texts
+#  maybe the checks of buffer change can be made faster, by asking for some last change timestamp (even better if it also containt extmark changes)
+# neighbor move commands
+#  make the scale track it
 # record some demo
 # look into syncing with syncthing
 #  or using attach nvim with tcp
@@ -31,6 +35,7 @@ from view import GraphicView
 # for more granular control of bookmarks, each group would need to be a separate folder?
 #  but also separate nvim session, and I don't want that
 #  ? but maybe this option could be set https://github.com/MattesGroeger/vim-bookmarks#bookmarks-per-buffer
+# highlight bookmarks
 # make ** text bold
 #
 # mid:
@@ -64,8 +69,8 @@ class MainWindow(QMainWindow):
         self.show()
 
 
-def nvim_notification(method, args):
-    return print("notification", method, args)
+# def nvim_notification(method, args):
+#     return print("notification", method, args)
 
 
 if __name__ == "__main__":
@@ -79,6 +84,9 @@ if __name__ == "__main__":
     # text that doesn't fit in window can't be jumped to with Leap (for now)
     nvim.ui_attach(80, 100, True)
     # nvim = pynvim.attach('socket', path='/tmp/nvim')
+
+    # nvim.subscribe('nvim_buf_lines_event')
+    # nvim.run_loop(notification_cb=nvim_notification, request_cb=None)
 
     app = QApplication(sys.argv)
     view = GraphicView(nvim, savedirs)

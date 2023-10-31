@@ -52,9 +52,9 @@ class DraggableText(QGraphicsProxyWidget):
         self.pin_pos = None
 
         self._last_height = 0
-        self._last_text = ""
-        self._last_marks = False
+        self._last_changedtick = 0
         self._last_current = False
+        self._last_lines = []
 
         self.text_box = NonSelectableTextEdit()
 
@@ -87,7 +87,7 @@ class DraggableText(QGraphicsProxyWidget):
         doc.setIndentWidth(1)
 
         self.setWidget(self.text_box)
-        self.update_text()
+        # self.update_text()
 
     def mouseMoveEvent(self, event):
         # drag around
@@ -158,24 +158,33 @@ class DraggableText(QGraphicsProxyWidget):
             yield block
             block = block.next()
 
-    def update_text(self):
+    def update_text(self, current_buffer, force_redraw, mode_info, get_marks):
         # first, decide whether we need to redraw
-        lines = self.buffer[:]
-        marks = self.nvim.api.buf_get_extmarks(
-            self.buffer.number, -1, (0, 0), (-1, -1), {"details": True}
-        )
-        if not (
-            lines != self._last_text
-            or self.nvim.current.buffer == self.buffer
-            or marks != []
-            or self._last_marks
-            or self._last_current
-        ):
-            # no need for redraw
+        if force_redraw or self._last_current:
+            # we must redraw
+            changedtick = self.nvim.api.buf_get_changedtick(self.buffer.number)
+            pass
+        elif current_buffer != self.buffer:
             return
-        self._last_text = lines.copy()
-        self._last_marks = marks != []
-        self._last_current = self.nvim.current.buffer == self.buffer
+        else:
+            # this is current buffer, but see if it was changed
+            changedtick = self.nvim.api.buf_get_changedtick(self.buffer.number)
+            if self._last_changedtick == changedtick:
+                return
+
+        self._last_current = current_buffer == self.buffer
+
+        if self._last_changedtick != changedtick or force_redraw:
+            lines = self.buffer[:]
+            self._last_lines = lines
+            self._last_changedtick = changedtick
+        else:
+            lines = self._last_lines
+
+        # TODO optimization:
+        # only during leaps all of the texts will be redrawn, so that can
+        # become really slow - otherwise it's ok
+        #  then I could go back to additionally checking if extmark changed
 
         # add space to empty lines so that cursor can be displayed there
         for i, line in enumerate(lines):
@@ -183,6 +192,12 @@ class DraggableText(QGraphicsProxyWidget):
                 lines[i] = " "
 
         # set marks text (mainly for the leap plugin)
+        if get_marks:
+            marks = self.nvim.api.buf_get_extmarks(
+                self.buffer.number, -1, (0, 0), (-1, -1), {"details": True}
+            )
+        else:
+            marks = []
         mark_positions = []
         for _, y, x, details in marks:
             virt_text = details["virt_text"]
@@ -255,10 +270,9 @@ class DraggableText(QGraphicsProxyWidget):
 
         ###################################################################
         # the rest if done only if this node's buffer is the current buffer
-        if self.nvim.current.buffer != self.buffer:
+        if current_buffer != self.buffer:
             return
-
-        mode = self.nvim.api.get_mode()["mode"]
+        mode = mode_info["mode"]
 
         # set cursor
         curs_y, curs_x = self.nvim.current.window.cursor

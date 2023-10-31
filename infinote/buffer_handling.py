@@ -17,6 +17,7 @@ class BufferHandler:
         self._buffer_to_text = {}
         self.forward_jumplist = []
         self.savedir_indexes = {}
+        self._last_forced_redraw = None
 
     def get_num_unbound_buffers(self):
         return len(self.nvim.buffers) - len(self._buffer_to_text)
@@ -82,25 +83,27 @@ class BufferHandler:
         raise RuntimeError("no unused buffer found")
 
     def update_all_texts(self):
-        print()
+        mode = self.nvim.api.get_mode()
+        if mode["blocking"]:
+            return
+
         start = time.time()
         # unfocus the text boxes - better would be to always have focus
         self.view.dummy.setFocus()
 
-        if self.nvim.api.get_mode()["blocking"]:
-            return
+        # (it's better to do this once and pass around, bc every nvim api query is ~3ms)
+        current_buffer = self.nvim.current.buffer
+        jumped = current_buffer != self.jumplist[-1]
 
         # there are glitches when moving texts around
         # so redraw the background first
         # TODO this does not work
         # note: this happens only when maximized
 
-        print(0, time.time() - start)
         # delete empty texts
-        # for text in list(self.get_texts()):
         for last_buf in self.jumplist[-1:]:
             text = self._buffer_to_text.get(self.nvim.buffers[last_buf])
-            if text.buffer == self.nvim.current.buffer:
+            if text.buffer == current_buffer:
                 # current buffer can be empty
                 continue
             if self.nvim.api.buf_line_count(text.buffer) > 1:
@@ -124,22 +127,6 @@ class BufferHandler:
 
                 del text
 
-        print(1, time.time() - start)
-        # # make sure each tab has exactly one buffer
-        # for tab in self.nvim.api.list_tabpages():
-        #     # get the num of buffers in this tab
-        #     wins = self.nvim.api.tabpage_list_wins(tab)
-        #     if len(wins) == 1:
-        #         continue
-        #     bufs_in_tab = {self.nvim.api.win_get_buf(win): win for win in wins}
-        #     unbound_bufs = [
-        #         buf for buf in bufs_in_tab if buf not in self._buffer_to_text
-        #     ]
-        #     for unb_buf in unbound_bufs:
-        #         # delete its window
-        #         win = bufs_in_tab[unb_buf]
-        #         self.nvim.api.win_close(win, True)
-
         # make sure current tab has the current buffer
         current_tab = self.nvim.api.get_current_tabpage()
         # get the num of buffers in this tab
@@ -154,28 +141,45 @@ class BufferHandler:
                 win = bufs_in_tab[unb_buf]
                 self.nvim.api.win_close(win, True)
 
-        print(2, time.time() - start)
         # if hidden buffer focused, focus on the last chosen text
-        if self.nvim.current.buffer not in self._buffer_to_text:
+        if current_buffer not in self._buffer_to_text:
             self.jump_to_buffer(self.jumplist[-1])
+            current_buffer = self.nvim.current.buffer
 
-        print(3, time.time() - start)
         # grow jumplist
-        current_buf = self.nvim.current.buffer
         if (
-            current_buf.number != self.jumplist[-1]
-            and current_buf in self._buffer_to_text
+            current_buffer.number != self.jumplist[-1]
+            and current_buffer in self._buffer_to_text
         ):
-            self.jumplist.append(current_buf.number)
+            self.jumplist.append(current_buffer.number)
             self.forward_jumplist = []
             self.jumplist = self.jumplist[-10:]
 
-        print(4, time.time() - start)
         # redraw
+        cur_buf_marks = self.nvim.api.buf_get_extmarks(
+            current_buffer.number, -1, (0, 0), (-1, -1), {}
+        )
+        # note that in principle other buffers could have marks
+        # but when it comes to leap marks, they are only present iff current buffer
+        # has some too
+        get_marks = cur_buf_marks != []
+        force_redraw_now = cur_buf_marks != []
+        force_redraw = (
+            force_redraw_now
+            or self._last_forced_redraw
+            or self._last_forced_redraw is None  # first time
+            or jumped
+        )
+        self._last_forced_redraw = force_redraw_now
+        # print()
         for text in self.get_texts():
-            text.update_text()
+            start = time.time()
+            text.update_text(current_buffer, force_redraw, mode, get_marks)
+            # print("update_text", time.time() - start)
+        for text in self.get_texts():
+            # TODO actually reposition should be called only on root texts
+            # but the overhead is tiny
             text.reposition()
-        print(5, time.time() - start)
 
     def get_texts(self):
         yield from self._buffer_to_text.values()

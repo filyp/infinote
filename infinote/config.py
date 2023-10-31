@@ -22,9 +22,9 @@ class Config:
     scroll_invert = True
 
     # https://blog.depositphotos.com/15-cyberpunk-color-palettes-for-dystopian-designs.html
-    dir_colors = ["#05d9e8", "#2bbf52", "#d9e805"]
-    text_colors = ["#d7fcfe", "#def7e5", "#fcfed7"]  # double dir_color's HSL
-    selection_colors = ["#036c72", "#175e2b", "#6d7203"]  # half dir_color's HSL
+    dir_colors = ["#05d9e8", "#d9e805", "#2bbf52"]
+    text_colors = ["#d7fcfe", "#fcfed7", "#def7e5"]  # double dir_color's HSL
+    selection_colors = ["#036c72", "#6d7203", "#175e2b"]  # half dir_color's HSL
 
     non_persistent_dir_color = "#eb004a"
     non_persistent_text_color = "#ffd6e3"

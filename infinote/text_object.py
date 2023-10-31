@@ -350,4 +350,3 @@ class DraggableText(QGraphicsProxyWidget):
             # set the cursor pos anyway, so that in visual widget scrolls to it
             cursor.setPosition(pos)
         self.text_box.setTextCursor(cursor)
-        

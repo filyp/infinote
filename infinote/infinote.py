@@ -63,9 +63,9 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.view = view
         self.setCentralWidget(self.view)
-        self.showMaximized()
+        # self.showMaximized()
         # # not maximized, but 1000x1000
-        # self.resize(1900, 600)
+        self.resize(1900, 600)
         self.show()
 
 

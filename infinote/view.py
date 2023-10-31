@@ -1,4 +1,5 @@
 import time
+from pathlib import Path
 
 import pynvim
 from buffer_handling import BufferHandler
@@ -126,3 +127,12 @@ class GraphicView(QGraphicsView):
 
     def msg(self, msg):
         self._message.append(msg)
+
+    def get_state(self):
+        return dict(
+            global_scale=self.global_scale,
+            current_folder=self.current_folder.as_posix(),
+            current_file=Path(self.nvim.current.buffer.name)
+            .relative_to(Path.cwd())
+            .as_posix(),
+        )

@@ -25,7 +25,6 @@ def load_scene(view: QGraphicsView, savedirs: Path):
         # load all
 
         meta = json.loads(meta_path.read_text())
-        view.global_scale = meta["global_scale"]
         global_meta.update(meta)
 
         # load them into buffers
@@ -52,14 +51,32 @@ def load_scene(view: QGraphicsView, savedirs: Path):
 
     assert loaded_any_folder, "no markdown files found in any folder"
 
+    # set the global state
+    main_meta_file = savedirs[0] / "meta.json"
+    if main_meta_file.exists():
+        main_meta = json.loads(main_meta_file.read_text())
+        view.global_scale = main_meta["global_scale"]
+        view.current_folder = (
+            main_meta["current_folder"]
+            if main_meta["current_folder"] in savedirs
+            else savedirs[0]
+        )
+        view.buf_handler.jump_to_file(main_meta["current_file"])
+
 
 def save_scene(view: QGraphicsView, savedirs: List[Path]):
-    # save each text
-    for text in view.buf_handler.get_texts():
-        text.save()
-
     # build metadata jsons
-    metas = {savedir: dict(global_scale=view.global_scale) for savedir in savedirs}
+    metas = {}
+    for savedir in savedirs:
+        old_meta_file = savedir / "meta.json"
+        if old_meta_file.exists():
+            old_meta = json.loads((savedir / "meta.json").read_text())
+            # take the old view metadata, but remove all the old text metadata
+            metas[savedir] = {
+                k: v for k, v in old_meta.items() if not k.endswith(".md")
+            }
+    # only save current view metadata to the main (first) savedir
+    metas[savedirs[0]] = view.get_state()
 
     for text in view.buf_handler.get_texts():
         if text.filename is None:
@@ -79,3 +96,8 @@ def save_scene(view: QGraphicsView, savedirs: List[Path]):
     for savedir, meta in metas.items():
         meta_path = savedir / "meta.json"
         meta_path.write_text(json.dumps(meta, indent=4))
+
+    #########################################
+    # save each text
+    for text in view.buf_handler.get_texts():
+        text.save()

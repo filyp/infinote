@@ -1,5 +1,6 @@
 import time
 from collections import defaultdict
+from pathlib import Path
 
 import pynvim
 from config import Config
@@ -63,6 +64,23 @@ class BufferHandler:
                 tab_num = tab.number
                 break
         assert tab_num is not None, "buffer not found"
+        self.nvim.command(f"tabnext {tab_num}")
+
+    def jump_to_file(self, filename):
+        tab_num = None
+        for tab in self.nvim.api.list_tabpages():
+            wins = self.nvim.api.tabpage_list_wins(tab)
+            assert len(wins) == 1, "each tab must have exactly one window"
+            candidate_buf_num = self.nvim.api.win_get_buf(wins[0]).number
+            candidate_filename = self.nvim.api.buf_get_name(candidate_buf_num)
+            candidate_filename = (
+                Path(candidate_filename).relative_to(Path.cwd()).as_posix()
+            )
+            if candidate_filename == filename:
+                # found it
+                tab_num = tab.number
+                break
+        assert tab_num is not None, "file not found"
         self.nvim.command(f"tabnext {tab_num}")
 
     def create_text(self, savedir, pos, manual_scale=Config.starting_box_scale):

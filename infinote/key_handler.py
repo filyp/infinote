@@ -1,3 +1,5 @@
+import time
+
 from config import Config
 from PySide6.QtCore import Qt
 
@@ -15,7 +17,7 @@ class KeyHandler:
         self.command_mode = False
         self.search_mode = False
         self.backward_search_mode = False
-        self.leader_key_pressed = False
+        self._leader_key_last_pressed = False
 
     def handle_key_event(self, event):
         special_keys = {
@@ -62,13 +64,17 @@ class KeyHandler:
         assert mode != "c", "there should be no way to get into command mode"
 
         # handle custom commands
-        if self.leader_key_pressed:
-            self.leader_key_pressed = False
-            self.handle_custom_command(text)
+        if self._leader_key_last_pressed:
+            self._leader_key_last_pressed = False
+            self.handle_custom_command(Config.leader_key + text)
             return
-        if mode == "n" and text == Config.leader_key:
-            # custom leader key pressed
-            self.leader_key_pressed = True
+        elif mode == "n" and text == Config.leader_key:
+            # leader key pressed
+            self._leader_key_last_pressed = True
+            return
+        elif mode == "n" and text in Config.keys:
+            # custom command pressed
+            self.handle_custom_command(text)
             return
 
         # monitor command and search input
@@ -136,17 +142,28 @@ class KeyHandler:
         else:
             return ""
 
-    def handle_custom_command(self, cmd_char):
-        match cmd_char:
-            case Config.hop_key:
+    def handle_custom_command(self, key_combo):
+        if key_combo not in Config.keys:
+            return
+        command = Config.keys[key_combo]
+
+        buf_handler = self.view.buf_handler
+
+        match command:
+            case "hop":
                 cmd = ":lua require('leap').leap { target_windows = vim.api.nvim_list_wins() }"
                 self.nvim.input(f":{cmd}<CR>")
-            case Config.bookmark_jump_key:
+            case "bookmark jump":
                 cmd = (
                     '<Home>"fyt|f|<Right>"lyiw:buffer<Space><C-r>f<Enter>:<C-r>l<Enter>'
                 )
                 self.nvim.input(cmd)
-            case Config.create_child_down_key:
+            case "create child down":
                 self.view.buf_handler.create_child("down")
-            case Config.create_child_right_key:
+            case "create child right":
                 self.view.buf_handler.create_child("right")
+            case "move down":
+                current_text = buf_handler.get_current_text()
+                if current_text.child_down is not None:
+                    buf_num = current_text.child_down.buffer.number
+                    buf_handler.jump_to_buffer(buf_num)

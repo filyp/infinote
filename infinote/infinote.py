@@ -58,9 +58,9 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.view = view
         self.setCentralWidget(self.view)
-        # self.showMaximized()
+        self.showMaximized()
         # # not maximized, but 1000x1000
-        self.resize(1900, 600)
+        # self.resize(1900, 600)
         self.show()
 
 
@@ -104,8 +104,8 @@ if __name__ == "__main__":
         # center it
         initial_x = Config.initial_position[0]
         view.global_scale = window_width / (initial_x * 2 + first_text_width)
-        buf_handler.update_all_texts()
     buf_handler.jumplist = [nvim.current.buffer.number]
+    buf_handler.update_all_texts()
 
     exit_code = app.exec()
     save_scene(view, savedirs)

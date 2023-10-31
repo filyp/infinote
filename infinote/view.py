@@ -1,3 +1,5 @@
+import time
+
 import pynvim
 from buffer_handling import BufferHandler
 from config import Config
@@ -22,7 +24,7 @@ class GraphicView(QGraphicsView):
         super().__init__(parent)
         self.nvim = nvim
         self.setRenderHint(QPainter.Antialiasing)
-        self.setBackgroundBrush(QColor(Qt.black))
+        self.setBackgroundBrush(QColor(Config.background_color))
         self.setInteractive(True)
         self.setDragMode(QGraphicsView.RubberBandDrag)
         self.setMouseTracking(True)
@@ -36,13 +38,14 @@ class GraphicView(QGraphicsView):
         self.current_folder = savedirs[0]
 
         # note: this bg may be unnecessary (dummy object is necessary though)
-        # create a black background taking up all the space, to cover up glitches
+        # create a background taking up all the space, to cover up glitches
         # it also serves as a dummy object that can grab focus,
         # so that the text boxes can be unfocused
         bg = QGraphicsRectItem()
         bg.setFlag(QGraphicsItem.ItemIsFocusable)
-        bg.setBrush(QColor(Qt.black))
-        bg.setPen(QColor(Qt.black))
+        color = Config.background_color
+        bg.setBrush(QColor(color))
+        bg.setPen(QColor(color))
         screen_size = self.screen().size()
         bg.setRect(0, 0, screen_size.width(), screen_size.height())
         self.scene().addItem(bg)
@@ -52,8 +55,7 @@ class GraphicView(QGraphicsView):
         self.status_bar = QStatusBar()
         # place it at the top and display
         self.status_bar.setGeometry(0, 0, screen_size.width(), 20)
-        # make it black
-        self.status_bar.setStyleSheet("QStatusBar{background-color: black;}")
+        self.status_bar.setStyleSheet("QStatusBar{background-color: " + color + ";}")
         self._message = []
         self.scene().addWidget(self.status_bar)
 
@@ -93,6 +95,7 @@ class GraphicView(QGraphicsView):
             self.buf_handler.create_text(
                 self.current_folder, event.screenPos() / self.global_scale
             )
+            self.buf_handler.update_all_texts()
 
         super().mousePressEvent(event)
         self.dummy.setFocus()

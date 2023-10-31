@@ -6,27 +6,40 @@ from PySide6.QtWidgets import QApplication
 
 class Config:
     autoshrink = True
-    text_width = 400
-    text_max_height = 400 * 1.618
+    text_width = 300
+    text_max_height = 300 * 1  # * 1.618
     initial_position = (500, 40)
     text_gap = 10
-    starting_box_scale = 0.6
+    starting_box_scale = 0.7
     # font sizes for each indent level
     font_sizes = [12, 12, 12, 12, 10, 10, 10, 10, 8, 8, 8, 8]
 
-    dir_colors = ["#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#00FFFF", "#FF00FF"]
+    # https://blog.depositphotos.com/15-cyberpunk-color-palettes-for-dystopian-designs.html
+    dir_colors = ["#05d9e8", "#2bbf52", "#d9e805"]
+    text_colors = ["#d7fcfe", "#def7e5", "#fcfed7"]  # double dir_color's HSL
+    selection_colors = ["#036c72", "#175e2b", "#6d7203"]  # half dir_color's HSL
+
+    non_persistent_dir_color = "#eb004a"
+    non_persistent_text_color = "#ffd6e3"
+    non_persistent_selection_color = "#750025"
+
+    background_color = "#000000"
 
     leader_key = ","
-    # command keys after leader key
-    #
-    # hop to any text using leap plugin
-    hop_key = "h"
-    # when in bookmarks window, jump to location of bookmark under cursor
-    bookmark_jump_key = "b"
-    # create a child of the current text box, down of it
-    create_child_down_key = "<Space>"
-    # create a child of the current text box, right of it
-    create_child_right_key = "."
+    # supported single key codes, and single key codes preceded with leader key
+    # (note: the order of modifiers murt be M-, A-, S-, C-)
+    keys = {
+        # hop to any text using leap plugin
+        ",h": "hop",
+        # when in bookmarks window, jump to location of bookmark under cursor
+        ",b": "bookmark jump",
+        # create a child of the current text box, down of it
+        ",<Space>": "create child down",
+        # create a child of the current text box, right of it
+        ",.": "create child right",
+        # move to the down child
+        "<A-S-n>": "move down",
+    }
 
     # closer to 1 is slower
     scroll_speed = 1.0005

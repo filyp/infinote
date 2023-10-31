@@ -64,17 +64,23 @@ class DraggableText(QGraphicsProxyWidget):
 
         if filename is None:
             # it's non-persistent buffer, so mark its border yellow
-            dir_color = "#cc0"
+            dir_color = Config.non_persistent_dir_color
+            text_color = Config.non_persistent_text_color
+            self.selection_color = Config.non_persistent_selection_color
         else:
             savedir = Path(filename).parent
             savedir_index = self.view.buf_handler.savedir_indexes[savedir]
             savedir_index %= len(Config.dir_colors)
             dir_color = Config.dir_colors[savedir_index]
-        # make bg black, create a pale grey border
+            text_color = Config.text_colors[savedir_index]
+            self.selection_color = Config.selection_colors[savedir_index]
         style = f"""
-            background-color: black; color: white;
+            background-color: {Config.background_color};
             border: 1px solid {dir_color};
+            color: {text_color};
+            selection-background-color: {text_color};
         """
+        # box-shadow: 0px 0px 5px 0px {dir_color};
         self.text_box.setStyleSheet(style)
 
         doc = self.text_box.document()
@@ -236,6 +242,11 @@ class DraggableText(QGraphicsProxyWidget):
         height = self.text_box.document().size().height() + 2
         height = min(height, Config.text_max_height)
         self.text_box.setFixedHeight(height)
+        # for some weird reason, we need to set height twice,
+        # for the nonpersistent buffers to update correctly
+        height = self.text_box.document().size().height() + 2
+        height = min(height, Config.text_max_height)
+        self.text_box.setFixedHeight(height)
 
         # place children
         if height != self._last_height:
@@ -270,18 +281,18 @@ class DraggableText(QGraphicsProxyWidget):
             if s[0] > e[0] or (s[0] == e[0] and s[1] > e[1]):
                 s, e = e, s
         if mode == "v":
-            self.highlight("gray", s, e)
+            self.highlight(self.selection_color, s, e)
         elif mode == "V":
             # extend selection to full line
             s[1] = 1
             e[1] = len(self.buffer[e[0] - 1])
-            self.highlight("gray", s, e)
+            self.highlight(self.selection_color, s, e)
         elif mode == "\x16":
             # visual block selection
             x_start = min(s[1], e[1])
             x_end = max(s[1], e[1])
             for y in range(s[0], e[0] + 1):
-                self.highlight("gray", (y, x_start), (y, x_end))
+                self.highlight(self.selection_color, (y, x_start), (y, x_end))
 
     def place_down_children(self):
         if self.child_down is not None:

@@ -1,3 +1,4 @@
+import time
 from collections import defaultdict
 
 import pynvim
@@ -11,7 +12,7 @@ class BufferHandler:
         self.nvim = nvim
 
         self.view = view
-        self.jumplist = [None]  # must be set by view
+        self.jumplist = None  # must be set by view
         self.last_file_nums = defaultdict(lambda: 0)
         self._buffer_to_text = {}
         self.forward_jumplist = []
@@ -47,8 +48,6 @@ class BufferHandler:
 
         _tab_num = self.nvim.api.get_current_tabpage().number
         self._buffer_to_text[buffer] = text
-
-        self.update_all_texts()
         return text
 
     def jump_to_buffer(self, buf_num):
@@ -83,6 +82,8 @@ class BufferHandler:
         raise RuntimeError("no unused buffer found")
 
     def update_all_texts(self):
+        print()
+        start = time.time()
         # unfocus the text boxes - better would be to always have focus
         self.view.dummy.setFocus()
 
@@ -90,16 +91,22 @@ class BufferHandler:
             return
 
         # there are glitches when moving texts around
-        # so redraw the background first (black)
+        # so redraw the background first
         # TODO this does not work
         # note: this happens only when maximized
 
+        print(0, time.time() - start)
         # delete empty texts
-        for text in list(self.get_texts()):
+        # for text in list(self.get_texts()):
+        for last_buf in self.jumplist[-1:]:
+            text = self._buffer_to_text.get(self.nvim.buffers[last_buf])
             if text.buffer == self.nvim.current.buffer:
                 # current buffer can be empty
                 continue
-            if text.buffer[:] == [""] or not text.buffer[:]:
+            if self.nvim.api.buf_line_count(text.buffer) > 1:
+                continue
+            only_line = text.buffer[0]
+            if only_line.strip() == "":
                 if text.filename is not None:
                     self.nvim.command(f"call delete('{text.filename}')")
                 self.nvim.command(f"bwipeout! {text.buffer.number}")
@@ -117,12 +124,27 @@ class BufferHandler:
 
                 del text
 
-        # make sure each tab has exactly one buffer
-        for tab in self.nvim.api.list_tabpages():
-            # get the num of buffers in this tab
-            wins = self.nvim.api.tabpage_list_wins(tab)
-            if len(wins) == 1:
-                continue
+        print(1, time.time() - start)
+        # # make sure each tab has exactly one buffer
+        # for tab in self.nvim.api.list_tabpages():
+        #     # get the num of buffers in this tab
+        #     wins = self.nvim.api.tabpage_list_wins(tab)
+        #     if len(wins) == 1:
+        #         continue
+        #     bufs_in_tab = {self.nvim.api.win_get_buf(win): win for win in wins}
+        #     unbound_bufs = [
+        #         buf for buf in bufs_in_tab if buf not in self._buffer_to_text
+        #     ]
+        #     for unb_buf in unbound_bufs:
+        #         # delete its window
+        #         win = bufs_in_tab[unb_buf]
+        #         self.nvim.api.win_close(win, True)
+
+        # make sure current tab has the current buffer
+        current_tab = self.nvim.api.get_current_tabpage()
+        # get the num of buffers in this tab
+        wins = self.nvim.api.tabpage_list_wins(current_tab)
+        if len(wins) != 1:
             bufs_in_tab = {self.nvim.api.win_get_buf(win): win for win in wins}
             unbound_bufs = [
                 buf for buf in bufs_in_tab if buf not in self._buffer_to_text
@@ -132,10 +154,12 @@ class BufferHandler:
                 win = bufs_in_tab[unb_buf]
                 self.nvim.api.win_close(win, True)
 
+        print(2, time.time() - start)
         # if hidden buffer focused, focus on the last chosen text
         if self.nvim.current.buffer not in self._buffer_to_text:
             self.jump_to_buffer(self.jumplist[-1])
 
+        print(3, time.time() - start)
         # grow jumplist
         current_buf = self.nvim.current.buffer
         if (
@@ -146,19 +170,21 @@ class BufferHandler:
             self.forward_jumplist = []
             self.jumplist = self.jumplist[-10:]
 
+        print(4, time.time() - start)
         # redraw
         for text in self.get_texts():
             text.update_text()
             text.reposition()
+        print(5, time.time() - start)
 
     def get_texts(self):
         yield from self._buffer_to_text.values()
 
-    def _get_current_text(self):
+    def get_current_text(self):
         return self._buffer_to_text.get(self.nvim.current.buffer)
 
     def create_child(self, side):
-        current_text = self._get_current_text()
+        current_text = self.get_current_text()
 
         if current_text.filename is None:
             # it's not a persistent buffer, so it shouldn't have children

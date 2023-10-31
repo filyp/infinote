@@ -22,6 +22,8 @@ from text_object import DraggableText
 from view import GraphicView
 
 # TODO
+# ,z to zoom on the current text, so that it has same dist from start
+#   as start position
 # save current text to meta
 # optimize update_all_texts
 #  maybe the checks of buffer change can be made faster, by asking for some last change timestamp (even better if it also containt extmark changes)

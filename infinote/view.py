@@ -143,6 +143,9 @@ class GraphicView(QGraphicsView):
         buf_num = new.buffer.number
         self.buf_handler.jump_to_buffer(buf_num)
 
+        if Config.track_jumps_on_neighbor_moves:
+            self.track_jump(old, new)
+
     def track_jump(self, old, new):
         # update global scale to track the movement
 

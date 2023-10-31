@@ -54,6 +54,7 @@ class BufferHandler:
 
     def jump_to_buffer(self, buf_num):
         # jumping with ":buf <num>" would make some buffers hidden and break leap
+        # so we need to jump to the right tab instead
         tab_num = None
         for tab in self.nvim.api.list_tabpages():
             wins = self.nvim.api.tabpage_list_wins(tab)
@@ -67,6 +68,8 @@ class BufferHandler:
         self.nvim.command(f"tabnext {tab_num}")
 
     def jump_to_file(self, filename):
+        # jumping straight to the file would make some buffers hidden and break leap
+        # so we need to jump to the right tab instead
         tab_num = None
         for tab in self.nvim.api.list_tabpages():
             wins = self.nvim.api.tabpage_list_wins(tab)
@@ -175,12 +178,6 @@ class BufferHandler:
             self.forward_jumplist = []
             self.jumplist = self.jumplist[-10:]
 
-        current_buf = self.jumplist[-1]
-        if current_buf != last_buf and Config.track_jumps:
-            last_text = self._buffer_to_text[self.nvim.buffers[last_buf]]
-            current_text = self._buffer_to_text[self.nvim.buffers[current_buf]]
-            self.view.track_jump(last_text, current_text)
-
         # redraw
         cur_buf_marks = self.nvim.api.buf_get_extmarks(
             current_buffer.number, -1, (0, 0), (-1, -1), {}
@@ -234,3 +231,6 @@ class BufferHandler:
 
         child.parent = current_text
         current_text.reposition()
+
+        if Config.track_jumps_on_neighbor_moves:
+            self.view.track_jump(current_text, child)

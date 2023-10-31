@@ -113,7 +113,7 @@ class DraggableText(QGraphicsProxyWidget):
         if self.autoshrink:
             # euclidean magniture of plane_pos
             distance = (self.plane_pos.x() ** 2 + self.plane_pos.y() ** 2) ** 0.5
-            distance_scale = distance / Config.initial_position[0]
+            distance_scale = distance / Config._initial_distance
             return self.manual_scale * distance_scale
         else:
             return self.manual_scale

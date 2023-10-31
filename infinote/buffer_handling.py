@@ -83,6 +83,7 @@ class BufferHandler:
         raise RuntimeError("no unused buffer found")
 
     def update_all_texts(self):
+        start = time.time()
         mode = self.nvim.api.get_mode()
         if mode["blocking"]:
             return
@@ -180,6 +181,7 @@ class BufferHandler:
             # TODO actually reposition should be called only on root texts
             # but the overhead is tiny
             text.reposition()
+        # print("update_all_texts", time.time() - start)
 
     def get_texts(self):
         yield from self._buffer_to_text.values()

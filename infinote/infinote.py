@@ -83,7 +83,7 @@ if __name__ == "__main__":
     )
     # text that doesn't fit in window can't be jumped to with Leap (for now)
     nvim.ui_attach(80, 100, True)
-    # nvim = pynvim.attach('socket', path='/tmp/nvim')
+    # nvim = pynvim.attach('socket', path='/tmp/nvim')  # there's no speedup to this
 
     # nvim.subscribe('nvim_buf_lines_event')
     # nvim.run_loop(notification_cb=nvim_notification, request_cb=None)

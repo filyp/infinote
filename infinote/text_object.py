@@ -75,10 +75,19 @@ class DraggableText(QGraphicsProxyWidget):
             text_color = Config.text_colors[savedir_index]
             self.selection_color = Config.selection_colors[savedir_index]
         style = f"""
-            background-color: {Config.background_color};
-            border: 1px solid {dir_color};
-            color: {text_color};
-            selection-background-color: {text_color};
+            QTextEdit {{
+                background-color: {Config.background_color};
+                border: 1px solid {dir_color};
+                color: {text_color};
+                selection-background-color: {text_color};
+            }}
+            QScrollBar:vertical {{
+                width: 15px;
+                background: {Config.background_color};
+            }}
+            QScrollBar::handle:vertical {{
+                background-color: {self.selection_color};
+            }}
         """
         # box-shadow: 0px 0px 5px 0px {dir_color};
         self.text_box.setStyleSheet(style)
@@ -150,6 +159,37 @@ class DraggableText(QGraphicsProxyWidget):
         cursor.setPosition(start_pos, QTextCursor.MoveAnchor)
         cursor.setPosition(end_pos, QTextCursor.KeepAnchor)
         cursor.mergeCharFormat(color_format)
+
+    def place_down_children(self):
+        if self.child_down is not None:
+            height = self.get_plane_scale() * self.text_box.document().size().height()
+            gap = Config.text_gap * self.get_plane_scale()
+            self.child_down.plane_pos = self.plane_pos + QPointF(0, height + gap)
+            self.child_down.reposition()
+
+    def place_right_children(self):
+        if self.child_right is not None:
+            width = self.get_plane_scale() * self.text_box.document().size().width()
+            gap = Config.text_gap * self.get_plane_scale()
+            self.child_right.plane_pos = self.plane_pos + QPointF(width + gap, 0)
+            self.child_right.reposition()
+
+    def save(self):
+        if self.filename is None:
+            # this buffer was not created by this program, so don't save it
+            return
+
+        # take the actual filename from the buffer
+        buf_filename = self.buffer.name
+        # make it relative to Path.cwd()
+        buf_filename = Path(buf_filename).relative_to(Path.cwd()).as_posix()
+        # make sure the actual filename is the same as given one
+        assert buf_filename == self.filename, (buf_filename, self.filename)
+
+        # set this buffer as current
+        self.nvim.api.set_current_buf(self.buffer.number)
+        # save it
+        self.nvim.command("w")
 
     def _get_blocks(self):
         doc = self.text_box.document()
@@ -274,19 +314,6 @@ class DraggableText(QGraphicsProxyWidget):
             return
         mode = mode_info["mode"]
 
-        # set cursor
-        curs_y, curs_x = self.nvim.current.window.cursor
-        pos = self._yx_to_pos(curs_y, curs_x)
-        cursor = self.text_box.textCursor()
-        if mode == "n":
-            cursor.setPosition(pos, QTextCursor.MoveAnchor)
-            cursor.setPosition(pos + 1, QTextCursor.KeepAnchor)
-        elif mode == "i":
-            # get focus so that cursor is displayed
-            self.text_box.setFocus()
-            cursor.setPosition(pos)
-        self.text_box.setTextCursor(cursor)
-
         # set selection
         if mode == "v" or mode == "V" or mode == "\x16":
             s = self.nvim.eval('getpos("v")')[1:3]
@@ -308,33 +335,19 @@ class DraggableText(QGraphicsProxyWidget):
             for y in range(s[0], e[0] + 1):
                 self.highlight(self.selection_color, (y, x_start), (y, x_end))
 
-    def place_down_children(self):
-        if self.child_down is not None:
-            height = self.get_plane_scale() * self.text_box.document().size().height()
-            gap = Config.text_gap * self.get_plane_scale()
-            self.child_down.plane_pos = self.plane_pos + QPointF(0, height + gap)
-            self.child_down.reposition()
-
-    def place_right_children(self):
-        if self.child_right is not None:
-            width = self.get_plane_scale() * self.text_box.document().size().width()
-            gap = Config.text_gap * self.get_plane_scale()
-            self.child_right.plane_pos = self.plane_pos + QPointF(width + gap, 0)
-            self.child_right.reposition()
-
-    def save(self):
-        if self.filename is None:
-            # this buffer was not created by this program, so don't save it
-            return
-
-        # take the actual filename from the buffer
-        buf_filename = self.buffer.name
-        # make it relative to Path.cwd()
-        buf_filename = Path(buf_filename).relative_to(Path.cwd()).as_posix()
-        # make sure the actual filename is the same as given one
-        assert buf_filename == self.filename, (buf_filename, self.filename)
-
-        # set this buffer as current
-        self.nvim.api.set_current_buf(self.buffer.number)
-        # save it
-        self.nvim.command("w")
+        # set cursor
+        curs_y, curs_x = self.nvim.current.window.cursor
+        pos = self._yx_to_pos(curs_y, curs_x)
+        cursor = self.text_box.textCursor()
+        if mode == "n":
+            cursor.setPosition(pos, QTextCursor.MoveAnchor)
+            cursor.setPosition(pos + 1, QTextCursor.KeepAnchor)
+        elif mode == "i":
+            # get focus so that cursor is displayed
+            self.text_box.setFocus()
+            cursor.setPosition(pos)
+        else:
+            # set the cursor pos anyway, so that in visual widget scrolls to it
+            cursor.setPosition(pos)
+        self.text_box.setTextCursor(cursor)
+        

@@ -136,3 +136,19 @@ class GraphicView(QGraphicsView):
             .relative_to(Path.cwd())
             .as_posix(),
         )
+
+    def jump_to_neighbor(self, old, new):
+        if new is None:
+            return
+        buf_num = new.buffer.number
+        self.buf_handler.jump_to_buffer(buf_num)
+
+    def track_jump(self, old, new):
+        # update global scale to track the movement
+
+        old_pos = old.plane_pos
+        old_dist = (old_pos.x() ** 2 + old_pos.y() ** 2) ** 0.5
+        new_pos = new.plane_pos
+        new_dist = (new_pos.x() ** 2 + new_pos.y() ** 2) ** 0.5
+
+        self.global_scale *= old_dist / new_dist

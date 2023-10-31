@@ -112,7 +112,7 @@ if __name__ == "__main__":
         # center it
         initial_x = Config.initial_position[0]
         view.global_scale = window_width / (initial_x * 2 + first_text_width)
-    buf_handler.jumplist = [nvim.current.buffer.number]
+    buf_handler.jumplist = [None, nvim.current.buffer.number]
     buf_handler.update_all_texts()
 
     exit_code = app.exec()

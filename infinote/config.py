@@ -14,6 +14,13 @@ class Config:
     # font sizes for each indent level
     font_sizes = [12, 12, 12, 12, 10, 10, 10, 10, 8, 8, 8, 8]
 
+    # whether to change zoom level on each jump to track current text
+    track_jumps = True
+    # closer to 1 is slower
+    scroll_speed = 1.0005
+    # invert scroll direction
+    scroll_invert = True
+
     # https://blog.depositphotos.com/15-cyberpunk-color-palettes-for-dystopian-designs.html
     dir_colors = ["#05d9e8", "#2bbf52", "#d9e805"]
     text_colors = ["#d7fcfe", "#def7e5", "#fcfed7"]  # double dir_color's HSL
@@ -39,11 +46,7 @@ class Config:
         ",.": "create child right",
         # move to the down child
         "<A-S-n>": "move down",
+        "<A-S-e>": "move up",
+        "<A-S-m>": "move left",
+        "<A-S-i>": "move right",
     }
-
-    # closer to 1 is slower
-    scroll_speed = 1.0005
-    # invert scroll direction
-    scroll_invert = True
-
-    # FPS = 60

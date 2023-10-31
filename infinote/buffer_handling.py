@@ -113,6 +113,7 @@ class BufferHandler:
         # (it's better to do this once and pass around, bc every nvim api query is ~3ms)
         current_buffer = self.nvim.current.buffer
         jumped = current_buffer != self.jumplist[-1]
+        last_buf = self.jumplist[-1]
 
         # there are glitches when moving texts around
         # so redraw the background first
@@ -174,6 +175,12 @@ class BufferHandler:
             self.forward_jumplist = []
             self.jumplist = self.jumplist[-10:]
 
+        current_buf = self.jumplist[-1]
+        if current_buf != last_buf and Config.track_jumps:
+            last_text = self._buffer_to_text[self.nvim.buffers[last_buf]]
+            current_text = self._buffer_to_text[self.nvim.buffers[current_buf]]
+            self.view.track_jump(last_text, current_text)
+
         # redraw
         cur_buf_marks = self.nvim.api.buf_get_extmarks(
             current_buffer.number, -1, (0, 0), (-1, -1), {}
@@ -190,16 +197,11 @@ class BufferHandler:
             or jumped
         )
         self._last_forced_redraw = force_redraw_now
-        # print()
         for text in self.get_texts():
-            start = time.time()
             text.update_text(current_buffer, force_redraw, mode, get_marks)
-            # print("update_text", time.time() - start)
         for text in self.get_texts():
-            # TODO actually reposition should be called only on root texts
-            # but the overhead is tiny
+            # TODO actually reposition should be called only on root texts, but the overhead is tiny
             text.reposition()
-        # print("update_all_texts", time.time() - start)
 
     def get_texts(self):
         yield from self._buffer_to_text.values()

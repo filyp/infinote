@@ -148,6 +148,7 @@ class KeyHandler:
         command = Config.keys[key_combo]
 
         buf_handler = self.view.buf_handler
+        view = self.view
 
         match command:
             case "hop":
@@ -159,11 +160,18 @@ class KeyHandler:
                 )
                 self.nvim.input(cmd)
             case "create child down":
-                self.view.buf_handler.create_child("down")
+                buf_handler.create_child("down")
             case "create child right":
-                self.view.buf_handler.create_child("right")
+                buf_handler.create_child("right")
             case "move down":
                 current_text = buf_handler.get_current_text()
-                if current_text.child_down is not None:
-                    buf_num = current_text.child_down.buffer.number
-                    buf_handler.jump_to_buffer(buf_num)
+                view.jump_to_neighbor(current_text, current_text.child_down)
+            case "move up":
+                current_text = buf_handler.get_current_text()
+                view.jump_to_neighbor(current_text, current_text.parent)
+            case "move left":
+                current_text = buf_handler.get_current_text()
+                view.jump_to_neighbor(current_text, current_text.parent)
+            case "move right":
+                current_text = buf_handler.get_current_text()
+                view.jump_to_neighbor(current_text, current_text.child_right)

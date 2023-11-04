@@ -24,6 +24,9 @@ from view import GraphicView
 # TODO
 # ,z to zoom on the current text, so that it has same dist from start
 #   as start position
+# box shadows
+#  https://stackoverflow.com/questions/13962228/how-do-i-add-a-box-shadow-to-an-element-in-qt
+#  https://github.com/GvozdevLeonid/BoxShadow-in-PyQt-PySide
 # save current text to meta
 # optimize update_all_texts
 #  maybe the checks of buffer change can be made faster, by asking for some last change timestamp (even better if it also containt extmark changes)
@@ -71,10 +74,6 @@ class MainWindow(QMainWindow):
         self.show()
 
 
-# def nvim_notification(method, args):
-#     return print("notification", method, args)
-
-
 if __name__ == "__main__":
     savedirs = [Path(pathname) for pathname in sys.argv[1:]]
     for savedir in savedirs:
@@ -86,9 +85,6 @@ if __name__ == "__main__":
     # text that doesn't fit in window can't be jumped to with Leap (for now)
     nvim.ui_attach(80, 100, True)
     # nvim = pynvim.attach('socket', path='/tmp/nvim')  # there's no speedup to this
-
-    # nvim.subscribe('nvim_buf_lines_event')
-    # nvim.run_loop(notification_cb=nvim_notification, request_cb=None)
 
     app = QApplication(sys.argv)
     view = GraphicView(nvim, savedirs)

@@ -53,13 +53,9 @@ class DraggableText(QGraphicsProxyWidget):
 
         self._last_height = 0
         self._last_changedtick = 0
-        self._last_current = False
         self._last_lines = []
 
         self.text_box = NonSelectableTextEdit()
-
-        # font = QFont("monospace", Config.font_sizes[0])
-        # self.text_box.setFont(font)
         self.text_box.setFixedWidth(Config.text_width)
 
         if filename is None:
@@ -96,7 +92,8 @@ class DraggableText(QGraphicsProxyWidget):
         doc.setIndentWidth(1)
 
         self.setWidget(self.text_box)
-        # self.update_text()
+
+    # position related functions:
 
     def mouseMoveEvent(self, event):
         # drag around
@@ -148,18 +145,6 @@ class DraggableText(QGraphicsProxyWidget):
             self.child_right.parent = None
             self.child_right = None
 
-    def highlight(self, color_style, start, end):
-        color_format = QTextCharFormat()
-        color_format.setBackground(QColor(color_style))
-
-        start_pos = self._yx_to_pos(start[0], start[1] - 1)
-        end_pos = self._yx_to_pos(end[0], end[1])
-
-        cursor = self.text_box.textCursor()
-        cursor.setPosition(start_pos, QTextCursor.MoveAnchor)
-        cursor.setPosition(end_pos, QTextCursor.KeepAnchor)
-        cursor.mergeCharFormat(color_format)
-
     def place_down_children(self):
         if self.child_down is not None:
             height = self.get_plane_scale() * self.text_box.document().size().height()
@@ -173,6 +158,8 @@ class DraggableText(QGraphicsProxyWidget):
             gap = Config.text_gap * self.get_plane_scale()
             self.child_right.plane_pos = self.plane_pos + QPointF(width + gap, 0)
             self.child_right.reposition()
+
+    # text related functions:
 
     def save(self):
         if self.filename is None:
@@ -191,6 +178,18 @@ class DraggableText(QGraphicsProxyWidget):
         # save it
         self.nvim.command("w")
 
+    def highlight(self, color_style, start, end):
+        color_format = QTextCharFormat()
+        color_format.setBackground(QColor(color_style))
+
+        start_pos = self._yx_to_pos(start[0], start[1] - 1)
+        end_pos = self._yx_to_pos(end[0], end[1])
+
+        cursor = self.text_box.textCursor()
+        cursor.setPosition(start_pos, QTextCursor.MoveAnchor)
+        cursor.setPosition(end_pos, QTextCursor.KeepAnchor)
+        cursor.mergeCharFormat(color_format)
+
     def _get_blocks(self):
         doc = self.text_box.document()
         block = doc.begin()
@@ -198,63 +197,7 @@ class DraggableText(QGraphicsProxyWidget):
             yield block
             block = block.next()
 
-    def update_text(self, current_buffer, force_redraw, mode_info, get_marks):
-        # first, decide whether we need to redraw
-        if force_redraw or self._last_current:
-            # we must redraw
-            changedtick = self.nvim.api.buf_get_changedtick(self.buffer.number)
-            pass
-        elif current_buffer != self.buffer:
-            return
-        else:
-            # this is current buffer, but see if it was changed
-            changedtick = self.nvim.api.buf_get_changedtick(self.buffer.number)
-            if self._last_changedtick == changedtick:
-                return
-
-        self._last_current = current_buffer == self.buffer
-
-        if self._last_changedtick != changedtick or force_redraw:
-            lines = self.buffer[:]
-            self._last_lines = lines
-            self._last_changedtick = changedtick
-        else:
-            lines = self._last_lines
-
-        # TODO optimization:
-        # only during leaps all of the texts will be redrawn, so that can
-        # become really slow - otherwise it's ok
-        #  then I could go back to additionally checking if extmark changed
-
-        # add space to empty lines so that cursor can be displayed there
-        for i, line in enumerate(lines):
-            if line == "":
-                lines[i] = " "
-
-        # set marks text (mainly for the leap plugin)
-        if get_marks:
-            marks = self.nvim.api.buf_get_extmarks(
-                self.buffer.number, -1, (0, 0), (-1, -1), {"details": True}
-            )
-        else:
-            marks = []
-        mark_positions = []
-        for _, y, x, details in marks:
-            virt_text = details["virt_text"]
-            assert len(virt_text) == 1, virt_text
-            char, type_ = virt_text[0]
-            if type_ == "Cursor":
-                continue
-            # TODO later relax this?
-            assert type_ == "LeapLabelPrimary" or type_ == "LeapLabelSecondary", marks
-            # put that char into text
-            lines[y] = lines[y][:x] + char + lines[y][x + 1 :]
-            mark_positions.append((y, x))
-
-        # set new text
-        new_text = "\n".join(lines)
-        self.text_box.setText(new_text)
-
+    def _format_displayed_lines(self):
         # set the fancy formatting, with nice indents and decreasing font sizes
         cursor = self.text_box.textCursor()
         block_format = QTextBlockFormat()
@@ -285,11 +228,51 @@ class DraggableText(QGraphicsProxyWidget):
 
             self.text_box.setTextCursor(cursor)
 
+    def update_text(self, get_marks):
+        lines = self.buffer[:]
+
+        # maybeTODO optimization:
+        # only during leaps all of the texts will be redrawn, so that can
+        # become really slow - otherwise it's ok
+        #  then I could go back to additionally checking if extmark changed
+
+        # add space to empty lines so that cursor can be displayed there
+        for i, line in enumerate(lines):
+            if line == "":
+                lines[i] = " "
+
+        # set marks text (mainly for the leap plugin)
+        if get_marks:
+            marks = self.nvim.api.buf_get_extmarks(
+                self.buffer.number, -1, (0, 0), (-1, -1), {"details": True}
+            )
+        else:
+            marks = []
+        mark_positions = []
+        for _, y, x, details in marks:
+            virt_text = details["virt_text"]
+            assert len(virt_text) == 1, virt_text
+            char, type_ = virt_text[0]
+            if type_ == "Cursor":
+                continue
+            # maybeTODO later relax this?
+            assert type_ == "LeapLabelPrimary" or type_ == "LeapLabelSecondary", marks
+            # put that char into text
+            lines[y] = lines[y][:x] + char + lines[y][x + 1 :]
+            mark_positions.append((y, x))
+
+        # set new text
+        new_text = "\n".join(lines)
+        self.text_box.setText(new_text)
+
+        self._format_displayed_lines()
+
         # highlight the chars
         for y, x in mark_positions:
             self.highlight("brown", (y + 1, x + 1), (y + 1, x + 1))
 
         # clear cursor
+        cursor = self.text_box.textCursor()
         cursor.setPosition(0)
         self.text_box.setTextCursor(cursor)
 
@@ -308,10 +291,9 @@ class DraggableText(QGraphicsProxyWidget):
             self._last_height = height
             self.place_down_children()
 
-        ###################################################################
-        # the rest if done only if this node's buffer is the current buffer
-        if current_buffer != self.buffer:
-            return
+    def update_current_text(self, mode_info):
+        # this function if called only if this node's buffer is the current buffer
+
         mode = mode_info["mode"]
 
         # set selection

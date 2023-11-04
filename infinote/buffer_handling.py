@@ -15,13 +15,13 @@ class BufferHandler:
         self.view = view
         self.jumplist = None  # must be set by view
         self.last_file_nums = defaultdict(lambda: 0)
-        self._buffer_to_text = {}
+        self._buf_num_to_text = {}
         self.forward_jumplist = []
         self.savedir_indexes = {}
-        self._last_forced_redraw = None
+        self._full_redraw_on_next_update = True
 
     def get_num_unbound_buffers(self):
-        return len(self.nvim.buffers) - len(self._buffer_to_text)
+        return len(self.nvim.buffers) - len(self._buf_num_to_text)
 
     def open_filename(self, pos, manual_scale, filename=None, buffer=None):
         if isinstance(pos, (tuple, list)):
@@ -29,7 +29,7 @@ class BufferHandler:
 
         if buffer is None and filename is not None:
             # no buffer provided, so open the one with the given filename
-            num_of_texts = len(self._buffer_to_text)
+            num_of_texts = len(self._buf_num_to_text)
             if num_of_texts == 0:
                 self.nvim.command(f"edit {filename}")
             elif num_of_texts == len(self.nvim.buffers):
@@ -49,7 +49,7 @@ class BufferHandler:
         self.view.scene().addItem(text)
 
         _tab_num = self.nvim.api.get_current_tabpage().number
-        self._buffer_to_text[buffer] = text
+        self._buf_num_to_text[buffer.number] = text
         return text
 
     def jump_to_buffer(self, buf_num):
@@ -87,7 +87,7 @@ class BufferHandler:
         self.nvim.command(f"tabnext {tab_num}")
 
     def create_text(self, savedir, pos, manual_scale=Config.starting_box_scale):
-        num_of_texts = len(self._buffer_to_text)
+        num_of_texts = len(self._buf_num_to_text)
         if num_of_texts == len(self.nvim.buffers) or num_of_texts == 0:
             self.last_file_nums[savedir] += 1
             filename = f"{savedir}/{self.last_file_nums[savedir]}.md"
@@ -99,56 +99,62 @@ class BufferHandler:
 
         # get the unused buffer
         for buf in self.nvim.buffers:
-            if buf not in self._buffer_to_text:
+            if buf.number not in self._buf_num_to_text:
                 return self.open_filename(pos, manual_scale, filename, buf)
         raise RuntimeError("no unused buffer found")
 
+    def _is_buf_empty(self, buf):
+        if self.nvim.api.buf_line_count(buf) > 1:
+            return False
+        only_line = buf[0]
+        if only_line.strip() == "":
+            return True
+        return False
+
+    def _delete_buf(self, buf):
+        text = self._buf_num_to_text.get(buf.number)
+
+        if text.filename is not None:
+            # delete the file
+            self.nvim.command(f"call delete('{text.filename}')")
+
+        self.nvim.command(f"bwipeout! {buf.number}")
+        self.view.scene().removeItem(text)
+        self._buf_num_to_text.pop(buf.number)
+
+        # detach
+        text.detach_parent()
+        text.detach_children()
+
+        # delete from jumplists
+        self.jumplist = [x for x in self.jumplist if x != buf.number]
+        self.forward_jumplist = [x for x in self.forward_jumplist if x != buf.number]
+
+        del text
+
     def update_all_texts(self):
-        start = time.time()
-        mode = self.nvim.api.get_mode()
-        if mode["blocking"]:
+        mode_info = self.nvim.api.get_mode()
+        if mode_info["blocking"]:
             return
 
-        start = time.time()
         # unfocus the text boxes - better would be to always have focus
         self.view.dummy.setFocus()
 
         # (it's better to do this once and pass around, bc every nvim api query is ~3ms)
         current_buffer = self.nvim.current.buffer
-        jumped = current_buffer != self.jumplist[-1]
-        last_buf = self.jumplist[-1]
+        jumped = current_buffer.number != self.jumplist[-1]
+        # print(f"jumped: {jumped}")
 
         # there are glitches when moving texts around
         # so redraw the background first
         # TODO this does not work
         # note: this happens only when maximized
 
-        # delete empty texts
-        for last_buf in self.jumplist[-1:]:
-            text = self._buffer_to_text.get(self.nvim.buffers[last_buf])
-            if text.buffer == current_buffer:
-                # current buffer can be empty
-                continue
-            if self.nvim.api.buf_line_count(text.buffer) > 1:
-                continue
-            only_line = text.buffer[0]
-            if only_line.strip() == "":
-                if text.filename is not None:
-                    self.nvim.command(f"call delete('{text.filename}')")
-                self.nvim.command(f"bwipeout! {text.buffer.number}")
-                self.view.scene().removeItem(text)
-                self._buffer_to_text.pop(text.buffer)
-                # detach
-                text.detach_parent()
-                text.detach_children()
-                # delete from jumplists
-                buf_num = text.buffer.number
-                self.jumplist = [x for x in self.jumplist if x != buf_num]
-                self.forward_jumplist = [
-                    x for x in self.forward_jumplist if x != buf_num
-                ]
-
-                del text
+        # delete last buf if it's empty and unfocused
+        if self.jumplist[-1] != current_buffer.number:
+            _last_buf = self.nvim.buffers[self.jumplist[-1]]
+            if self._is_buf_empty(_last_buf):
+                self._delete_buf(_last_buf)
 
         # make sure current tab has the current buffer
         current_tab = self.nvim.api.get_current_tabpage()
@@ -157,7 +163,7 @@ class BufferHandler:
         if len(wins) != 1:
             bufs_in_tab = {self.nvim.api.win_get_buf(win): win for win in wins}
             unbound_bufs = [
-                buf for buf in bufs_in_tab if buf not in self._buffer_to_text
+                buf for buf in bufs_in_tab if buf.number not in self._buf_num_to_text
             ]
             for unb_buf in unbound_bufs:
                 # delete its window
@@ -165,46 +171,53 @@ class BufferHandler:
                 self.nvim.api.win_close(win, True)
 
         # if hidden buffer focused, focus on the last chosen text
-        if current_buffer not in self._buffer_to_text:
+        if current_buffer.number not in self._buf_num_to_text:
             self.jump_to_buffer(self.jumplist[-1])
             current_buffer = self.nvim.current.buffer
 
         # grow jumplist
         if (
             current_buffer.number != self.jumplist[-1]
-            and current_buffer in self._buffer_to_text
+            and current_buffer.number in self._buf_num_to_text
         ):
             self.jumplist.append(current_buffer.number)
             self.forward_jumplist = []
             self.jumplist = self.jumplist[-10:]
 
         # redraw
-        cur_buf_marks = self.nvim.api.buf_get_extmarks(
-            current_buffer.number, -1, (0, 0), (-1, -1), {}
-        )
         # note that in principle other buffers could have marks
         # but when it comes to leap marks, they are only present iff current buffer
         # has some too
-        get_marks = cur_buf_marks != []
-        force_redraw_now = cur_buf_marks != []
-        force_redraw = (
-            force_redraw_now
-            or self._last_forced_redraw
-            or self._last_forced_redraw is None  # first time
-            or jumped
+        get_extmarks = [] != self.nvim.api.buf_get_extmarks(
+            current_buffer.number, -1, (0, 0), (-1, -1), {}
         )
-        self._last_forced_redraw = force_redraw_now
-        for text in self.get_texts():
-            text.update_text(current_buffer, force_redraw, mode, get_marks)
+
+        if get_extmarks or self._full_redraw_on_next_update:
+            # redraw all
+            to_redraw = list(self.get_texts())
+        elif jumped:
+            last_text = self._buf_num_to_text.get(self.jumplist[-2])
+            to_redraw = [last_text, self.get_current_text()]
+        else:
+            to_redraw = [self.get_current_text()]
+
+        for text in to_redraw:
+            text.update_text(get_extmarks)
+
+        current_text = self.get_current_text()
+        current_text.update_current_text(mode_info)
+
         for text in self.get_texts():
             # TODO actually reposition should be called only on root texts, but the overhead is tiny
             text.reposition()
 
+        self._full_redraw_on_next_update = get_extmarks
+
     def get_texts(self):
-        yield from self._buffer_to_text.values()
+        yield from self._buf_num_to_text.values()
 
     def get_current_text(self):
-        return self._buffer_to_text.get(self.nvim.current.buffer)
+        return self._buf_num_to_text.get(self.nvim.current.buffer.number)
 
     def create_child(self, side):
         current_text = self.get_current_text()

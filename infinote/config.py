@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QApplication
 class Config:
     autoshrink = True
     text_width = 300
-    text_max_height = 300 * 1  # * 1.618
+    text_max_height = text_width * 1  # * 1.618
     initial_position = (500, 40)
     text_gap = 10
     starting_box_scale = 0.7

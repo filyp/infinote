@@ -5,7 +5,7 @@ from typing import List
 from PySide6.QtWidgets import QGraphicsView
 
 
-def load_scene(view: QGraphicsView, savedirs: Path):
+def load_scene(view: QGraphicsView, savedirs: List[Path]):
     loaded_any_folder = False
     filename_to_text = {}
     global_meta = {}

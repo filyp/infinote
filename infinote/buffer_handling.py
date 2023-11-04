@@ -142,8 +142,7 @@ class BufferHandler:
 
         # (it's better to do this once and pass around, bc every nvim api query is ~3ms)
         current_buffer = self.nvim.current.buffer
-        jumped = current_buffer.number != self.jumplist[-1]
-        # print(f"jumped: {jumped}")
+        last_focused = self.jumplist[-1]
 
         # there are glitches when moving texts around
         # so redraw the background first
@@ -157,10 +156,10 @@ class BufferHandler:
                 self._delete_buf(_last_buf)
 
         # make sure current tab has the current buffer
-        current_tab = self.nvim.api.get_current_tabpage()
         # get the num of buffers in this tab
-        wins = self.nvim.api.tabpage_list_wins(current_tab)
+        wins = self.nvim.current.tabpage.windows
         if len(wins) != 1:
+            wins = self.nvim.current.tabpage.windows
             bufs_in_tab = {self.nvim.api.win_get_buf(win): win for win in wins}
             unbound_bufs = [
                 buf for buf in bufs_in_tab if buf.number not in self._buf_num_to_text
@@ -194,17 +193,15 @@ class BufferHandler:
 
         if get_extmarks or self._full_redraw_on_next_update:
             # redraw all
-            to_redraw = list(self.get_texts())
-        elif jumped:
-            last_text = self._buf_num_to_text.get(self.jumplist[-2])
-            to_redraw = [last_text, self.get_current_text()]
+            to_redraw = set(self._buf_num_to_text.keys())
         else:
-            to_redraw = [self.get_current_text()]
+            to_redraw = set((current_buffer.number, last_focused))
 
-        for text in to_redraw:
+        for buf_num in to_redraw:
+            text = self._buf_num_to_text[buf_num]
             text.update_text(get_extmarks)
 
-        current_text = self.get_current_text()
+        current_text = self._buf_num_to_text[current_buffer.number]
         current_text.update_current_text(mode_info)
 
         for text in self.get_texts():
@@ -220,7 +217,7 @@ class BufferHandler:
         return self._buf_num_to_text.get(self.nvim.current.buffer.number)
 
     def create_child(self, side):
-        current_text = self.get_current_text()
+        current_text = self._buf_num_to_text.get(self.nvim.current.buffer.number)
 
         if current_text.filename is None:
             # it's not a persistent buffer, so it shouldn't have children

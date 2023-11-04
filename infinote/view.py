@@ -132,9 +132,6 @@ class GraphicView(QGraphicsView):
         return dict(
             global_scale=self.global_scale,
             current_folder=self.current_folder.as_posix(),
-            current_file=Path(self.nvim.current.buffer.name)
-            .relative_to(Path.cwd())
-            .as_posix(),
         )
 
     def jump_to_neighbor(self, old, new):

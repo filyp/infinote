@@ -61,7 +61,6 @@ def load_scene(view: QGraphicsView, savedirs: List[Path]):
             if main_meta["current_folder"] in savedirs
             else savedirs[0]
         )
-        view.buf_handler.jump_to_file(main_meta["current_file"])
 
 
 def save_scene(view: QGraphicsView, savedirs: List[Path]):

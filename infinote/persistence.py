@@ -13,9 +13,7 @@ def load_scene(view: QGraphicsView, savedirs: List[Path]):
         # if there is at least one markdown file, open it
         # names must be integers
         meta_path = savedir / "meta.json"
-        files = [
-            f for f in savedir.iterdir() if f.suffix == ".md" and f.stem.isnumeric()
-        ]
+        files = [f for f in savedir.iterdir() if f.suffix == ".md"]
 
         if files == [] or not meta_path.exists():
             print(f"no markdown files in {savedir}")
@@ -29,9 +27,10 @@ def load_scene(view: QGraphicsView, savedirs: List[Path]):
 
         # load them into buffers
         for full_filename in files:
-            # get the full filename, but relative
+            # TODO this may fail if savedir is passed as absolute
             filename = full_filename.as_posix()
             info = meta[filename]
+
             # create text
             text = view.buf_handler.open_filename(
                 info["plane_pos"], info["manual_scale"], filename
@@ -39,7 +38,7 @@ def load_scene(view: QGraphicsView, savedirs: List[Path]):
             filename_to_text[filename] = text
 
         # prepare the next file number
-        max_filenum = max(int(f.stem) for f in files)
+        max_filenum = max(int(f.stem) for f in files if f.stem.isnumeric())
         view.buf_handler.last_file_nums[savedir] = max_filenum
 
     # connect them
@@ -51,32 +50,10 @@ def load_scene(view: QGraphicsView, savedirs: List[Path]):
 
     assert loaded_any_folder, "no markdown files found in any folder"
 
-    # set the global state
-    main_meta_file = savedirs[0] / "meta.json"
-    if main_meta_file.exists():
-        main_meta = json.loads(main_meta_file.read_text())
-        view.global_scale = main_meta["global_scale"]
-        view.current_folder = (
-            main_meta["current_folder"]
-            if main_meta["current_folder"] in savedirs
-            else savedirs[0]
-        )
-
 
 def save_scene(view: QGraphicsView, savedirs: List[Path]):
-    # build metadata jsons
-    metas = {}
-    for savedir in savedirs:
-        old_meta_file = savedir / "meta.json"
-        if old_meta_file.exists():
-            old_meta = json.loads((savedir / "meta.json").read_text())
-            # take the old view metadata, but remove all the old text metadata
-            metas[savedir] = {
-                k: v for k, v in old_meta.items() if not k.endswith(".md")
-            }
-    # only save current view metadata to the main (first) savedir
-    metas[savedirs[0]] = view.get_state()
-
+    # record text metadata
+    metas = {savedir: {} for savedir in savedirs}
     for text in view.buf_handler.get_texts():
         if text.filename is None:
             # this buffer was not created by this program, so don't save it

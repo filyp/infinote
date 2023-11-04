@@ -128,20 +128,23 @@ class GraphicView(QGraphicsView):
     def msg(self, msg):
         self._message.append(msg)
 
-    def get_state(self):
-        return dict(
-            global_scale=self.global_scale,
-            current_folder=self.current_folder.as_posix(),
-        )
-
-    def jump_to_neighbor(self, old, new):
+    def jump_to_neighbor(self, direction: str):
+        current_text = self.buf_handler.get_current_text()
+        match direction:
+            case "down":
+                new = current_text.child_down
+            case "right":
+                new = current_text.child_right
+            case "up" | "left":
+                new = current_text.parent
         if new is None:
             return
+
         buf_num = new.buffer.number
         self.buf_handler.jump_to_buffer(buf_num)
 
         if Config.track_jumps_on_neighbor_moves:
-            self.track_jump(old, new)
+            self.track_jump(current_text, new)
 
     def track_jump(self, old, new):
         # update global scale to track the movement

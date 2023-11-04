@@ -51,6 +51,9 @@ class Config:
         "<A-S-e>": "move up",
         "<A-S-m>": "move left",
         "<A-S-i>": "move right",
+        # custom C-o and C-i, because normal ones create unwanted buffers
+        "<C-o>": "jump back",
+        "<C-i>": "jump forward",
     }
 
     ########################

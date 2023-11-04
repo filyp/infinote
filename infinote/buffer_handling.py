@@ -244,3 +244,17 @@ class BufferHandler:
 
         if Config.track_jumps_on_neighbor_moves:
             self.view.track_jump(current_text, child)
+
+    def jump_back(self):
+        if len(self.jumplist) <= 1:
+            return
+        current = self.jumplist.pop()
+        self.forward_jumplist.append(current)
+        self.jump_to_buffer(self.jumplist[-1])
+
+    def jump_forward(self):
+        if len(self.forward_jumplist) == 0:
+            return
+        new = self.forward_jumplist.pop()
+        self.jumplist.append(new)
+        self.jump_to_buffer(new)

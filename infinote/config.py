@@ -28,10 +28,10 @@ class Config:
     key_zoom_speed = 3
 
     # https://blog.depositphotos.com/15-cyberpunk-color-palettes-for-dystopian-designs.html
-    dir_colors = [c.format(46) for c in _colors]
+    dir_colors = [c.format(28) for c in _colors]
     text_colors = [c.format(80) for c in _colors]
     selection_colors = [c.format(23) for c in _colors]
-    non_persistent_dir_color = _color_non_persistent.format(46)
+    non_persistent_dir_color = _color_non_persistent.format(28)
     non_persistent_text_color = _color_non_persistent.format(80)
     non_persistent_selection_color = _color_non_persistent.format(23)
     background_color = "#000000"

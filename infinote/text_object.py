@@ -156,7 +156,7 @@ class DraggableText(QGraphicsProxyWidget):
     def place_right_children(self):
         if self.child_right is not None:
             width = self.get_plane_width()
-            gap = Config.text_gap * self.get_plane_scale()
+            gap = Config.text_gap * self.get_plane_scale() / self.manual_scale
             self.child_right.plane_pos = self.plane_pos + QPointF(width + gap, 0)
             self.child_right.reposition()
 

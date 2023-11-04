@@ -106,10 +106,8 @@ if __name__ == "__main__":
         first_text_width = (
             Config.text_width * text.get_plane_scale() * view.global_scale
         )
-        window_width = view.screen().size().width()
-        # center it
-        initial_x = Config.initial_position[0]
-        view.global_scale = window_width / (initial_x * 2 + first_text_width)
+    view.zoom_on_current_text()
+
     buf_handler.jumplist = [None, nvim.current.buffer.number]
     buf_handler.update_all_texts()
 

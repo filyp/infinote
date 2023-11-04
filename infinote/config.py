@@ -3,6 +3,8 @@ import sys
 import pynvim
 from PySide6.QtWidgets import QApplication
 
+_colors = ["hsl(184, 96%, {}%)", "hsl(64, 96%, {}%)", "hsl(136, 96%, {}%)"]
+
 
 class Config:
     autoshrink = True
@@ -23,10 +25,9 @@ class Config:
     scroll_invert = True
 
     # https://blog.depositphotos.com/15-cyberpunk-color-palettes-for-dystopian-designs.html
-    dir_colors = ["#05d9e8", "#d9e805", "#2bbf52"]
-    # TODO make this less than a double for stronger color hint:
-    text_colors = ["#d7fcfe", "#fcfed7", "#def7e5"]  # double dir_color's HSL
-    selection_colors = ["#036c72", "#6d7203", "#175e2b"]  # half dir_color's HSL
+    dir_colors = [c.format(46) for c in _colors]
+    text_colors = [c.format(80) for c in _colors]
+    selection_colors = [c.format(23) for c in _colors]
 
     non_persistent_dir_color = "#eb004a"
     non_persistent_text_color = "#ffd6e3"
@@ -42,6 +43,8 @@ class Config:
         ",h": "hop",
         # when in bookmarks window, jump to location of bookmark under cursor
         ",b": "bookmark jump",
+        # zoom on the current text box
+        ",z": "zoom on current text",
         # create a child of the current text box, down of it
         ",<Space>": "create child down",
         # create a child of the current text box, right of it

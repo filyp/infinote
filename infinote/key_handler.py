@@ -157,6 +157,8 @@ class KeyHandler:
                     '<Home>"fyt|f|<Right>"lyiw:buffer<Space><C-r>f<Enter>:<C-r>l<Enter>'
                 )
                 self.nvim.input(cmd)
+            case "zoom on current text":
+                view.zoom_on_current_text()
             case "create child down":
                 buf_handler.create_child("down")
             case "create child right":

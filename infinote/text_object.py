@@ -159,6 +159,17 @@ class DraggableText(QGraphicsProxyWidget):
             self.child_right.plane_pos = self.plane_pos + QPointF(width + gap, 0)
             self.child_right.reposition()
 
+    def _calculate_height(self):
+        height = self.text_box.document().size().height() + 2
+        height = min(height, Config.text_max_height)
+        return height
+
+    def get_plane_width(self):
+        return self.get_plane_scale() * Config.text_width
+
+    def get_plane_height(self):
+        return self.get_plane_scale() * self._calculate_height()
+
     # text related functions:
 
     def save(self):
@@ -277,14 +288,11 @@ class DraggableText(QGraphicsProxyWidget):
         self.text_box.setTextCursor(cursor)
 
         # set height
-        height = self.text_box.document().size().height() + 2
-        height = min(height, Config.text_max_height)
+        height = self._calculate_height()
+        self.text_box.setFixedHeight(height)
         self.text_box.setFixedHeight(height)
         # for some weird reason, we need to set height twice,
         # for the nonpersistent buffers to update correctly
-        height = self.text_box.document().size().height() + 2
-        height = min(height, Config.text_max_height)
-        self.text_box.setFixedHeight(height)
 
         # place children
         if height != self._last_height:

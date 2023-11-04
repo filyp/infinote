@@ -155,3 +155,16 @@ class GraphicView(QGraphicsView):
         new_dist = (new_pos.x() ** 2 + new_pos.y() ** 2) ** 0.5
 
         self.global_scale *= old_dist / new_dist
+
+    def zoom_on_current_text(self):
+        text = self.buf_handler.get_current_text()
+        x = text.plane_pos.x()
+        y = text.plane_pos.y()
+
+        window_width = self.screen().size().width()
+        center_scale = window_width / (x * 2 + text.get_plane_width())
+
+        window_height = self.screen().size().height()
+        height_scale = window_height / (y + text.get_plane_height()) * 0.9
+
+        self.global_scale = min(center_scale, height_scale)

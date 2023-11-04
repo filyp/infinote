@@ -1,3 +1,4 @@
+import re
 import textwrap
 import time
 from pathlib import Path
@@ -147,14 +148,14 @@ class DraggableText(QGraphicsProxyWidget):
 
     def place_down_children(self):
         if self.child_down is not None:
-            height = self.get_plane_scale() * self.text_box.document().size().height()
-            gap = Config.text_gap * self.get_plane_scale()
+            height = self.get_plane_height()
+            gap = Config.text_gap * self.get_plane_scale() / self.manual_scale
             self.child_down.plane_pos = self.plane_pos + QPointF(0, height + gap)
             self.child_down.reposition()
 
     def place_right_children(self):
         if self.child_right is not None:
-            width = self.get_plane_scale() * self.text_box.document().size().width()
+            width = self.get_plane_width()
             gap = Config.text_gap * self.get_plane_scale()
             self.child_right.plane_pos = self.plane_pos + QPointF(width + gap, 0)
             self.child_right.reposition()
@@ -190,8 +191,18 @@ class DraggableText(QGraphicsProxyWidget):
         self.nvim.command("w")
 
     def highlight(self, color_style, start, end):
+        match = re.match("hsl\((\d+), (\d+)%, (\d+)%\)", color_style)
+        if match:
+            h = int(match[1])
+            s = int(int(match[2]) * 255 / 100)
+            l = int(int(match[3]) * 255 / 100)
+            color = QColor()
+            color.setHsl(h, s, l)
+        else:
+            color = QColor(color_style)
+
         color_format = QTextCharFormat()
-        color_format.setBackground(QColor(color_style))
+        color_format.setBackground(color)
 
         start_pos = self._yx_to_pos(start[0], start[1] - 1)
         end_pos = self._yx_to_pos(end[0], end[1])

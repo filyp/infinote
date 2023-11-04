@@ -4,7 +4,7 @@ from pathlib import Path
 import pynvim
 from buffer_handling import BufferHandler
 from config import Config
-from key_handler import KeyHandler
+from key_handler import KeyHandler, parse_key_event_into_text
 from PySide6.QtCore import QPointF, Qt, QTimer
 from PySide6.QtGui import QColor, QFont, QPainter, QPixmap
 from PySide6.QtWidgets import (
@@ -24,6 +24,7 @@ class GraphicView(QGraphicsView):
     def __init__(self, nvim, savedirs, parent=None):
         super().__init__(parent)
         self.nvim = nvim
+        self.savedirs = savedirs
         self.setRenderHint(QPainter.Antialiasing)
         self.setBackgroundBrush(QColor(Config.background_color))
         self.setInteractive(True)
@@ -35,8 +36,9 @@ class GraphicView(QGraphicsView):
         self.global_scale = 1.0
         self.key_handler = KeyHandler(nvim, self)
         self.buf_handler = BufferHandler(nvim, self)
-        self.savedirs = savedirs
         self.current_folder = savedirs[0]
+        self.timer = None
+        self._timer_last_update = None
 
         # note: this bg may be unnecessary (dummy object is necessary though)
         # create a background taking up all the space, to cover up glitches
@@ -110,7 +112,7 @@ class GraphicView(QGraphicsView):
 
     def wheelEvent(self, event):
         direction = -1 if Config.scroll_invert else 1
-        zoom_factor = 1.0005 ** (event.angleDelta().y() * direction)
+        zoom_factor = Config.scroll_speed ** (event.angleDelta().y() * direction)
 
         item = self.scene().itemAt(event.position(), self.transform())
         if isinstance(item, DraggableText):
@@ -122,7 +124,7 @@ class GraphicView(QGraphicsView):
             self.global_scale *= zoom_factor
 
             # reposition all texts
-            for text in self.buf_handler.get_texts():
+            for text in self.buf_handler.get_root_texts():
                 text.reposition()
 
     def msg(self, msg):
@@ -168,3 +170,41 @@ class GraphicView(QGraphicsView):
         height_scale = window_height / (y + text.get_plane_height()) * 0.9
 
         self.global_scale = min(center_scale, height_scale)
+
+    def keyReleaseEvent(self, event):
+        if event.isAutoRepeat():
+            return
+
+        if self.timer is not None:
+            self.timer.stop()
+            self.timer = None
+            self._timer_last_update = None
+
+    def zoom(self, sign):
+        if self._timer_last_update is None:
+            # timer just starting
+            self._timer_last_update = time.time()
+            return
+        new_time = time.time()
+        time_diff = new_time - self._timer_last_update
+        self._timer_last_update = new_time
+
+        self.global_scale *= Config.key_zoom_speed ** (time_diff * sign)
+
+        # reposition all texts
+        for text in self.buf_handler.get_root_texts():
+            text.reposition()
+
+    def resize(self, sign):
+        if self._timer_last_update is None:
+            # timer just starting
+            self._timer_last_update = time.time()
+            return
+        new_time = time.time()
+        time_diff = new_time - self._timer_last_update
+        self._timer_last_update = new_time
+
+        # resize current text box
+        text = self.buf_handler.get_current_text()
+        text.manual_scale *= Config.key_zoom_speed ** (time_diff * sign)
+        text.reposition()

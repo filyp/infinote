@@ -22,16 +22,9 @@ from text_object import DraggableText
 from view import GraphicView
 
 # TODO
-# ,z to zoom on the current text, so that it has same dist from start
-#   as start position
 # box shadows
 #  https://stackoverflow.com/questions/13962228/how-do-i-add-a-box-shadow-to-an-element-in-qt
 #  https://github.com/GvozdevLeonid/BoxShadow-in-PyQt-PySide
-# save current text to meta
-# optimize update_all_texts
-#  maybe the checks of buffer change can be made faster, by asking for some last change timestamp (even better if it also containt extmark changes)
-# neighbor move commands
-#  make the scale track it
 # record some demo
 # look into syncing with syncthing
 #  or using attach nvim with tcp

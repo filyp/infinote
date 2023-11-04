@@ -2,10 +2,14 @@ import time
 from collections import defaultdict
 from pathlib import Path
 
-import pynvim
 from config import Config
 from PySide6.QtCore import QPointF, Qt, QTimer
 from text_object import DraggableText
+
+# there are glitches when moving texts around
+# so redraw the background first
+# TODO this does not work
+# note: this happens only when maximized
 
 
 class BufferHandler:
@@ -19,6 +23,8 @@ class BufferHandler:
         self.forward_jumplist = []
         self.savedir_indexes = {}
         self._full_redraw_on_next_update = True
+        self._to_redraw = set()
+        self.catch_child = None
 
     def get_num_unbound_buffers(self):
         return len(self.nvim.buffers) - len(self._buf_num_to_text)
@@ -132,22 +138,8 @@ class BufferHandler:
 
         del text
 
-    def update_all_texts(self):
-        mode_info = self.nvim.api.get_mode()
-        if mode_info["blocking"]:
-            return
-
-        # unfocus the text boxes - better would be to always have focus
-        self.view.dummy.setFocus()
-
-        # (it's better to do this once and pass around, bc every nvim api query is ~3ms)
+    def _sanitize_buffers(self):
         current_buffer = self.nvim.current.buffer
-        last_focused = self.jumplist[-1]
-
-        # there are glitches when moving texts around
-        # so redraw the background first
-        # TODO this does not work
-        # note: this happens only when maximized
 
         # delete last buf if it's empty and unfocused
         if self.jumplist[-1] != current_buffer.number:
@@ -172,7 +164,27 @@ class BufferHandler:
         # if hidden buffer focused, focus on the last chosen text
         if current_buffer.number not in self._buf_num_to_text:
             self.jump_to_buffer(self.jumplist[-1])
-            current_buffer = self.nvim.current.buffer
+
+    def update_all_texts(self):
+        mode_info = self.nvim.api.get_mode()
+        if mode_info["blocking"]:
+            return
+
+        # unfocus the text boxes - but better would be to always have focus
+        self.view.dummy.setFocus()
+
+        # (it's better to do this once and pass around, bc every nvim api query is ~3ms)
+        self._to_redraw.add(self.jumplist[-1])
+
+        self._sanitize_buffers()
+        current_buffer = self.nvim.current.buffer
+
+        # catch children
+        if self.jumplist[-1] != current_buffer.number and self.catch_child is not None:
+            parent_text = self._buf_num_to_text[self.jumplist[-1]]
+            child_text = self._buf_num_to_text[current_buffer.number]
+            self.reattach_text(parent_text, child_text)
+            self.catch_child = None
 
         # grow jumplist
         if (
@@ -195,7 +207,9 @@ class BufferHandler:
             # redraw all
             to_redraw = set(self._buf_num_to_text.keys())
         else:
-            to_redraw = set((current_buffer.number, last_focused))
+            self._to_redraw.add(current_buffer.number)
+            to_redraw = self._to_redraw & self._buf_num_to_text.keys()
+        self._to_redraw = set()
 
         for buf_num in to_redraw:
             text = self._buf_num_to_text[buf_num]
@@ -204,14 +218,21 @@ class BufferHandler:
         current_text = self._buf_num_to_text[current_buffer.number]
         current_text.update_current_text(mode_info)
 
-        for text in self.get_texts():
-            # TODO actually reposition should be called only on root texts, but the overhead is tiny
+        for text in self.get_root_texts():
             text.reposition()
 
         self._full_redraw_on_next_update = get_extmarks
 
     def get_texts(self):
         yield from self._buf_num_to_text.values()
+
+    def get_root_texts(self):
+        roots = set()
+        for text in self.get_texts():
+            while text.parent is not None:
+                text = text.parent
+            roots.add(text)
+        return roots
 
     def get_current_text(self):
         return self._buf_num_to_text.get(self.nvim.current.buffer.number)
@@ -246,15 +267,45 @@ class BufferHandler:
             self.view.track_jump(current_text, child)
 
     def jump_back(self):
-        if len(self.jumplist) <= 1:
+        if len(self.jumplist) <= 2:
             return
-        current = self.jumplist.pop()
-        self.forward_jumplist.append(current)
+        old = self.jumplist.pop()
+        self.forward_jumplist.append(old)
         self.jump_to_buffer(self.jumplist[-1])
+        self._to_redraw.add(old)
+        old_buf = self.nvim.buffers[old]
+        if self._is_buf_empty(old_buf):
+            self._delete_buf(old_buf)
 
     def jump_forward(self):
         if len(self.forward_jumplist) == 0:
             return
+        old = self.get_current_text().buffer.number
+        self._to_redraw.add(old)
         new = self.forward_jumplist.pop()
         self.jumplist.append(new)
         self.jump_to_buffer(new)
+        old_buf = self.nvim.buffers[old]
+        if self._is_buf_empty(old_buf):
+            self._delete_buf(old_buf)
+
+    def reattach_text(self, parent_text, child_text):
+        child_text.detach_parent()
+
+        # we have to check we're not creating a cycle
+        parents_root = parent_text
+        while parents_root.parent is not None:
+            parents_root = parents_root.parent
+        childs_root = child_text
+        while childs_root.parent is not None:
+            childs_root = childs_root.parent
+        if childs_root == parents_root:
+            self.view.msg("can't reattach - we would create a cycle")
+            return
+
+        if self.catch_child == "down":
+            parent_text.child_down = child_text
+            child_text.parent = parent_text
+        elif self.catch_child == "right":
+            parent_text.child_right = child_text
+            child_text.parent = parent_text

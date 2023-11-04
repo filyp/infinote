@@ -1,7 +1,7 @@
 import time
 
 from config import Config
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 
 # # getting cmd output, but it's blocking:
 # out = self.nvim.command_output(self.command)
@@ -171,7 +171,33 @@ class KeyHandler:
                 view.jump_to_neighbor("left")
             case "move right":
                 view.jump_to_neighbor("right")
+            case "zoom up":
+                if view.timer is None:
+                    view.timer = QTimer()
+                    view.timer.timeout.connect(lambda: view.zoom(-1))
+                    view.timer.start(1000 / Config.FPS)
+            case "zoom down":
+                if view.timer is None:
+                    view.timer = QTimer()
+                    view.timer.timeout.connect(lambda: view.zoom(1))
+                    view.timer.start(1000 / Config.FPS)
+            case "grow box":
+                if view.timer is None:
+                    view.timer = QTimer()
+                    view.timer.timeout.connect(lambda: view.resize(1))
+                    view.timer.start(1000 / Config.FPS)
+            case "shrink box":
+                if view.timer is None:
+                    view.timer = QTimer()
+                    view.timer.timeout.connect(lambda: view.resize(-1))
+                    view.timer.start(1000 / Config.FPS)
             case "jump back":
                 buf_handler.jump_back()
             case "jump forward":
                 buf_handler.jump_forward()
+            case "catch child down":
+                buf_handler.catch_child = "down"
+                view.msg("catching child down")
+            case "catch child right":
+                buf_handler.catch_child = "right"
+                view.msg("catching child right")

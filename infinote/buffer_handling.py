@@ -78,17 +78,7 @@ class BufferHandler:
     def jump_to_buffer(self, buf_num):
         # jumping with ":buf <num>" would make some buffers hidden and break leap
         # so we need to jump to the right tab instead
-        tab_num = None
-        for tab in self.nvim.api.list_tabpages():
-            wins = self.nvim.api.tabpage_list_wins(tab)
-            assert len(wins) == 1, "each tab must have exactly one window"
-            candidate_buf_num = self.nvim.api.win_get_buf(wins[0]).number
-            if candidate_buf_num == buf_num:
-                # found it
-                tab_num = tab.number
-                break
-        assert tab_num is not None, "buffer not found"
-        self.nvim.command(f"tabnext {tab_num}")
+        self.nvim.command(f"call Go_to_tab_with_buffer({buf_num})")
 
     def jump_to_file(self, filename):
         # jumping straight to the file would make some buffers hidden and break leap
@@ -218,7 +208,12 @@ class BufferHandler:
             child_text.parent = parent_text
 
     def _sanitize_buffers(self):
-        current_buffer = self.nvim.current.buffer
+        current_buffer, wins = self.nvim.api.call_atomic(
+            [
+                ["nvim_get_current_buf", []],
+                ["nvim_tabpage_list_wins", [self.nvim.current.tabpage]],
+            ]
+        )[0]
 
         # delete last buf if it's empty and unfocused
         if self.jumplist[-1] != current_buffer.number:
@@ -227,10 +222,8 @@ class BufferHandler:
                 self._delete_buf(_last_buf)
 
         # make sure current tab has the current buffer
-        # get the num of buffers in this tab
-        wins = self.nvim.current.tabpage.windows
+        # get the num of wins in this tab
         if len(wins) != 1:
-            wins = self.nvim.current.tabpage.windows
             bufs_in_tab = {self.nvim.api.win_get_buf(win): win for win in wins}
             unbound_bufs = [
                 buf for buf in bufs_in_tab if buf.number not in self._buf_num_to_text

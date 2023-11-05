@@ -22,9 +22,6 @@ from text_object import DraggableText
 from view import GraphicView
 
 # TODO
-# box shadows
-#  https://stackoverflow.com/questions/13962228/how-do-i-add-a-box-shadow-to-an-element-in-qt
-#  https://github.com/GvozdevLeonid/BoxShadow-in-PyQt-PySide
 # record some demo
 # look into syncing with syncthing
 #  or using attach nvim with tcp
@@ -33,22 +30,27 @@ from view import GraphicView
 # for more granular control of bookmarks, each group would need to be a separate folder?
 #  but also separate nvim session, and I don't want that
 #  ? but maybe this option could be set https://github.com/MattesGroeger/vim-bookmarks#bookmarks-per-buffer
-# highlight bookmarks
-# make ** text bold
 #
 # mid:
+# ? (have bookmarks per layer folder)
 # if I even want to optimize, I shouldn't draw all the texts on each keypress
 #  instead draw onl the changed, and redraw the rest is s was pressed
-# highlight search
 # save web of transitions with timestamps
+# highlight bookmarks
+# make ** text bold
+# box shadows
+#  https://stackoverflow.com/questions/13962228/how-do-i-add-a-box-shadow-to-an-element-in-qt
+#  https://github.com/GvozdevLeonid/BoxShadow-in-PyQt-PySide
 
 # low:
 # polish chars seem to break stuff, because they throuw position out of range,
 #     they are probably more chars than one
-# ? (have bookmarks per layer folder)
+# highlight search
 # if stuff gets too heavy, move back to QTextBrowser, and just have some different color for insert cursor?
+#  for now, the bottleneck is communication with nvim
 # dragging take correction for rescaling, keep mouse pos fixed on text pos
 # solve those weird glitches when moving text around
+#  havent seen them lately though
 # unnamed buffers, created with piping something to vim, if they exist, they can fuck stuff up, binding gets incorrect
 # for >100 lines texts, I still may not be able to jump there
 #  https://github.com/ggandor/leap.nvim/issues/196

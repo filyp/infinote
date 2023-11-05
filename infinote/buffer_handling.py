@@ -40,6 +40,7 @@ class BufferHandler:
                 self.nvim.command(f"edit {filename}")
             elif num_of_texts == len(self.nvim.buffers):
                 # create new file
+                # this line is the loading time bottleneck - each call is 36ms
                 self.nvim.command(f"tabnew {filename}")
             buffer = self.nvim.current.buffer
         elif buffer is not None and filename is None:
@@ -54,7 +55,6 @@ class BufferHandler:
         text = DraggableText(self.nvim, buffer, filename, self.view, pos, manual_scale)
         self.view.scene().addItem(text)
 
-        _tab_num = self.nvim.api.get_current_tabpage().number
         self._buf_num_to_text[buffer.number] = text
         return text
 

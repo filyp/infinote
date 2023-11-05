@@ -95,7 +95,6 @@ class GraphicView(QGraphicsView):
             self.buf_handler.update_all_texts()
 
         super().mousePressEvent(event)
-        # self.dummy.setFocus()
         item.setFocus()
         self._render_status_bar()
 

@@ -6,6 +6,68 @@ from PySide6.QtWidgets import QApplication
 _colors = ["hsl(184, 96%, {}%)", "hsl(64, 96%, {}%)", "hsl(136, 96%, {}%)"]
 _color_non_persistent = "hsl(341, 96%, {}%)"
 
+colemak_keys = {
+    # hop to any text using leap plugin
+    ",h": "hop",
+    # when in bookmarks window, jump to location of bookmark under cursor
+    ",b": "bookmark jump",
+    # zoom on the current text box
+    ",z": "zoom on current text",
+    # create a child of the current text box, down of it
+    ",<Space>": "create child down",
+    # create a child of the current text box, right of it
+    ",.": "create child right",
+    # move to the down child
+    "<A-S-n>": "move down",
+    "<A-S-e>": "move up",
+    "<A-S-m>": "move left",
+    "<A-S-i>": "move right",
+    # zooming
+    "<A-S-k>": "zoom down",
+    "<A-S->>": "zoom up",
+    # resizing box
+    "<A-S-h>": "grow box",
+    "<A-S-<>": "shrink box",
+    # custom C-o and C-i, because normal ones create unwanted buffers
+    "<C-o>": "jump back",
+    "<C-i>": "jump forward",
+    # catch a child and insert it down
+    ",<S-Space>": "catch child down",
+    # catch a child and insert it right
+    ",<S->>": "catch child right",
+}
+
+qwerty_keys = {
+    # hop to any text using leap plugin
+    ",h": "hop",
+    # when in bookmarks window, jump to location of bookmark under cursor
+    ",b": "bookmark jump",
+    # zoom on the current text box
+    ",z": "zoom on current text",
+    # create a child of the current text box, down of it
+    ",<Space>": "create child down",
+    # create a child of the current text box, right of it
+    ",.": "create child right",
+    # move to the down child
+    "<A-S-j>": "move down",
+    "<A-S-k>": "move up",
+    "<A-S-h>": "move left",
+    "<A-S-l>": "move right",
+    # zooming
+    "<A-S-n>": "zoom down",
+    "<A-S->>": "zoom up",
+    # resizing box
+    "<A-S-m>": "grow box",
+    "<A-S-<>": "shrink box",
+    # custom C-o and C-i, because normal ones create unwanted buffers
+    "<C-o>": "jump back",
+    "<C-i>": "jump forward",
+    # catch a child and insert it down
+    ",<S-Space>": "catch child down",
+    # catch a child and insert it right
+    ",<S->>": "catch child right",
+}
+
 
 class Config:
     autoshrink = True
@@ -39,36 +101,7 @@ class Config:
     leader_key = ","
     # supported single key codes, and single key codes preceded with leader key
     # (note: the order of modifiers murt be M-, A-, S-, C-)
-    keys = {
-        # hop to any text using leap plugin
-        ",h": "hop",
-        # when in bookmarks window, jump to location of bookmark under cursor
-        ",b": "bookmark jump",
-        # zoom on the current text box
-        ",z": "zoom on current text",
-        # create a child of the current text box, down of it
-        ",<Space>": "create child down",
-        # create a child of the current text box, right of it
-        ",.": "create child right",
-        # move to the down child
-        "<A-S-n>": "move down",
-        "<A-S-e>": "move up",
-        "<A-S-m>": "move left",
-        "<A-S-i>": "move right",
-        # zooming
-        "<A-S-k>": "zoom down",
-        "<A-S->>": "zoom up",
-        # resizing box
-        "<A-S-h>": "grow box",
-        "<A-S-<>": "shrink box",
-        # custom C-o and C-i, because normal ones create unwanted buffers
-        "<C-o>": "jump back",
-        "<C-i>": "jump forward",
-        # catch a child and insert it down
-        ",<S-Space>": "catch child down",
-        # catch a child and insert it right
-        ",<S->>": "catch child right",
-    }
+    keys = colemak_keys
 
     FPS = 180
 

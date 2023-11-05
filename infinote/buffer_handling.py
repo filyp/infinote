@@ -130,6 +130,93 @@ class BufferHandler:
 
         del text
 
+    def get_texts(self):
+        yield from self._buf_num_to_text.values()
+
+    def get_root_texts(self):
+        roots = set()
+        for text in self.get_texts():
+            while text.parent is not None:
+                text = text.parent
+            roots.add(text)
+        return roots
+
+    def get_current_text(self):
+        return self._buf_num_to_text.get(self.nvim.current.buffer.number)
+
+    def create_child(self, side):
+        current_text = self._buf_num_to_text.get(self.nvim.current.buffer.number)
+
+        if current_text.filename is None:
+            # it's not a persistent buffer, so it shouldn't have children
+            self.view.msg("can't create children for non-persistent buffers")
+            return
+
+        if side == "right":
+            if current_text.child_right is not None:
+                self.view.msg("right child already exists")
+                return
+            child = self.create_text(self.view.current_folder, (0, 0))
+            current_text.child_right = child
+        elif side == "down":
+            if current_text.child_down is not None:
+                self.view.msg("down child already exists")
+                return
+            child = self.create_text(self.view.current_folder, (0, 0))
+            current_text.child_down = child
+        else:
+            raise ValueError("side must be 'right' or 'down'")
+
+        child.parent = current_text
+        current_text.reposition()
+
+        if Config.track_jumps_on_neighbor_moves:
+            self.view.track_jump(current_text, child)
+
+    def jump_back(self):
+        if len(self.jumplist) <= 2:
+            return
+        old = self.jumplist.pop()
+        self.forward_jumplist.append(old)
+        self.jump_to_buffer(self.jumplist[-1])
+        self._to_redraw.add(old)
+        old_buf = self.nvim.buffers[old]
+        if is_buf_empty(old_buf):
+            self._delete_buf(old_buf)
+
+    def jump_forward(self):
+        if len(self.forward_jumplist) == 0:
+            return
+        old = self.get_current_text().buffer.number
+        self._to_redraw.add(old)
+        new = self.forward_jumplist.pop()
+        self.jumplist.append(new)
+        self.jump_to_buffer(new)
+        old_buf = self.nvim.buffers[old]
+        if is_buf_empty(old_buf):
+            self._delete_buf(old_buf)
+
+    def reattach_text(self, parent_text, child_text):
+        child_text.detach_parent()
+
+        # we have to check we're not creating a cycle
+        parents_root = parent_text
+        while parents_root.parent is not None:
+            parents_root = parents_root.parent
+        childs_root = child_text
+        while childs_root.parent is not None:
+            childs_root = childs_root.parent
+        if childs_root == parents_root:
+            self.view.msg("can't reattach - we would create a cycle")
+            return
+
+        if self.catch_child == "down":
+            parent_text.child_down = child_text
+            child_text.parent = parent_text
+        elif self.catch_child == "right":
+            parent_text.child_right = child_text
+            child_text.parent = parent_text
+
     def _sanitize_buffers(self):
         current_buffer = self.nvim.current.buffer
 
@@ -224,90 +311,3 @@ class BufferHandler:
             text.reposition()
 
         self._full_redraw_on_next_update = get_extmarks
-
-    def get_texts(self):
-        yield from self._buf_num_to_text.values()
-
-    def get_root_texts(self):
-        roots = set()
-        for text in self.get_texts():
-            while text.parent is not None:
-                text = text.parent
-            roots.add(text)
-        return roots
-
-    def get_current_text(self):
-        return self._buf_num_to_text.get(self.nvim.current.buffer.number)
-
-    def create_child(self, side):
-        current_text = self._buf_num_to_text.get(self.nvim.current.buffer.number)
-
-        if current_text.filename is None:
-            # it's not a persistent buffer, so it shouldn't have children
-            self.view.msg("can't create children for non-persistent buffers")
-            return
-
-        if side == "right":
-            if current_text.child_right is not None:
-                self.view.msg("right child already exists")
-                return
-            child = self.create_text(self.view.current_folder, (0, 0))
-            current_text.child_right = child
-        elif side == "down":
-            if current_text.child_down is not None:
-                self.view.msg("down child already exists")
-                return
-            child = self.create_text(self.view.current_folder, (0, 0))
-            current_text.child_down = child
-        else:
-            raise ValueError("side must be 'right' or 'down'")
-
-        child.parent = current_text
-        current_text.reposition()
-
-        if Config.track_jumps_on_neighbor_moves:
-            self.view.track_jump(current_text, child)
-
-    def jump_back(self):
-        if len(self.jumplist) <= 2:
-            return
-        old = self.jumplist.pop()
-        self.forward_jumplist.append(old)
-        self.jump_to_buffer(self.jumplist[-1])
-        self._to_redraw.add(old)
-        old_buf = self.nvim.buffers[old]
-        if is_buf_empty(old_buf):
-            self._delete_buf(old_buf)
-
-    def jump_forward(self):
-        if len(self.forward_jumplist) == 0:
-            return
-        old = self.get_current_text().buffer.number
-        self._to_redraw.add(old)
-        new = self.forward_jumplist.pop()
-        self.jumplist.append(new)
-        self.jump_to_buffer(new)
-        old_buf = self.nvim.buffers[old]
-        if is_buf_empty(old_buf):
-            self._delete_buf(old_buf)
-
-    def reattach_text(self, parent_text, child_text):
-        child_text.detach_parent()
-
-        # we have to check we're not creating a cycle
-        parents_root = parent_text
-        while parents_root.parent is not None:
-            parents_root = parents_root.parent
-        childs_root = child_text
-        while childs_root.parent is not None:
-            childs_root = childs_root.parent
-        if childs_root == parents_root:
-            self.view.msg("can't reattach - we would create a cycle")
-            return
-
-        if self.catch_child == "down":
-            parent_text.child_down = child_text
-            child_text.parent = parent_text
-        elif self.catch_child == "right":
-            parent_text.child_right = child_text
-            child_text.parent = parent_text

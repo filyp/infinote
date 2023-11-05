@@ -23,6 +23,9 @@ from view import GraphicView
 
 # TODO
 # record some demo
+# maybe batch commands to nvim api
+#  now each key press takes optimistically 30ms, and if we jump with extmark even more
+#  additionally jumping to buffers takes 12ms
 # look into syncing with syncthing
 #  or using attach nvim with tcp
 #  everyone has their own folder

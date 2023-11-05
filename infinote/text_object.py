@@ -1,5 +1,5 @@
+import json
 import re
-import textwrap
 import time
 from pathlib import Path
 
@@ -51,13 +51,15 @@ class DraggableText(QGraphicsProxyWidget):
         self.child_right = None
         self.parent = None
         self.pin_pos = None
-
-        self._last_height = 0
-        self._last_changedtick = 0
-        self._last_lines = []
+        self.folds = []
 
         self.text_box = NonSelectableTextEdit()
         self.text_box.setFixedWidth(Config.text_width)
+
+        # get folds for potential future fold drawing
+        assert self.buffer == self.nvim.current.buffer
+        folds = self.nvim.command_output("echo Get_all_folds()")
+        self.folds = json.loads(folds)
 
         if filename is None:
             # it's non-persistent buffer, so mark its border yellow
@@ -120,6 +122,10 @@ class DraggableText(QGraphicsProxyWidget):
         global_scale = self.view.global_scale
         self.setScale(self.get_plane_scale() * global_scale)
         self.setPos(self.plane_pos * global_scale)
+
+        # set height
+        height = self._calculate_height()
+        self.text_box.setFixedHeight(height)
 
         self.place_down_children()
         self.place_right_children()
@@ -298,18 +304,6 @@ class DraggableText(QGraphicsProxyWidget):
         cursor.setPosition(0)
         self.text_box.setTextCursor(cursor)
 
-        # set height
-        height = self._calculate_height()
-        self.text_box.setFixedHeight(height)
-        self.text_box.setFixedHeight(height)
-        # for some weird reason, we need to set height twice,
-        # for the nonpersistent buffers to update correctly
-
-        # place children
-        if height != self._last_height:
-            self._last_height = height
-            self.place_down_children()
-
     def update_current_text(self, mode_info):
         # this function if called only if this node's buffer is the current buffer
 
@@ -351,3 +345,35 @@ class DraggableText(QGraphicsProxyWidget):
             # set the cursor pos anyway, so that in visual widget scrolls to it
             cursor.setPosition(pos)
         self.text_box.setTextCursor(cursor)
+
+        # get folds for potential future fold drawing
+        folds = self.nvim.command_output("echo Get_all_folds()")
+        self.folds = json.loads(folds)
+
+    def hide_folds(self):
+        # set folds
+        head_lines = set()
+        hidden_lines = set()
+        for fold in self.folds:
+            head_lines.add(fold[0])
+            current = fold[0] + 1
+            while current <= fold[1]:
+                hidden_lines.add(current)
+                current += 1
+
+        block = self.text_box.document().begin()
+        cursor = self.text_box.textCursor()
+        line_num = 1
+        while block.isValid():
+            if line_num in hidden_lines:
+                cursor.setPosition(block.position())
+                cursor.select(QTextCursor.BlockUnderCursor)
+                block = block.next()
+                cursor.removeSelectedText()
+            elif line_num in head_lines:
+                cursor.setPosition(block.position() + block.length() - 1)
+                cursor.insertText(" ...")
+                block = block.next()
+            else:
+                block = block.next()
+            line_num += 1

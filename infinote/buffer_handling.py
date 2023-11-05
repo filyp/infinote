@@ -58,6 +58,23 @@ class BufferHandler:
         self._buf_num_to_text[buffer.number] = text
         return text
 
+    def create_text(self, savedir, pos, manual_scale=Config.starting_box_scale):
+        num_of_texts = len(self._buf_num_to_text)
+        if num_of_texts == len(self.nvim.buffers) or num_of_texts == 0:
+            self.last_file_nums[savedir] += 1
+            filename = f"{savedir}/{self.last_file_nums[savedir]}.md"
+            return self.open_filename(pos, manual_scale, filename)
+
+        # some buffer was created some other way than calling create_text,
+        # so mark it to not be saved
+        filename = None
+
+        # get the unused buffer
+        for buf in self.nvim.buffers:
+            if buf.number not in self._buf_num_to_text:
+                return self.open_filename(pos, manual_scale, filename, buf)
+        raise RuntimeError("no unused buffer found")
+
     def jump_to_buffer(self, buf_num):
         # jumping with ":buf <num>" would make some buffers hidden and break leap
         # so we need to jump to the right tab instead
@@ -91,23 +108,6 @@ class BufferHandler:
                 break
         assert tab_num is not None, "file not found"
         self.nvim.command(f"tabnext {tab_num}")
-
-    def create_text(self, savedir, pos, manual_scale=Config.starting_box_scale):
-        num_of_texts = len(self._buf_num_to_text)
-        if num_of_texts == len(self.nvim.buffers) or num_of_texts == 0:
-            self.last_file_nums[savedir] += 1
-            filename = f"{savedir}/{self.last_file_nums[savedir]}.md"
-            return self.open_filename(pos, manual_scale, filename)
-
-        # some buffer was created some other way than calling create_text,
-        # so mark it to not be saved
-        filename = None
-
-        # get the unused buffer
-        for buf in self.nvim.buffers:
-            if buf.number not in self._buf_num_to_text:
-                return self.open_filename(pos, manual_scale, filename, buf)
-        raise RuntimeError("no unused buffer found")
 
     def _is_buf_empty(self, buf):
         if self.nvim.api.buf_line_count(buf) > 1:
@@ -195,6 +195,7 @@ class BufferHandler:
             self.forward_jumplist = []
             self.jumplist = self.jumplist[-10:]
 
+        ####################################################
         # redraw
         # note that in principle other buffers could have marks
         # but when it comes to leap marks, they are only present iff current buffer
@@ -203,6 +204,7 @@ class BufferHandler:
             current_buffer.number, -1, (0, 0), (-1, -1), {}
         )
 
+        # choose which ones to redraw
         if get_extmarks or self._full_redraw_on_next_update:
             # redraw all
             to_redraw = set(self._buf_num_to_text.keys())
@@ -211,13 +213,21 @@ class BufferHandler:
             to_redraw = self._to_redraw & self._buf_num_to_text.keys()
         self._to_redraw = set()
 
+        # initial redraw
         for buf_num in to_redraw:
             text = self._buf_num_to_text[buf_num]
             text.update_text(get_extmarks)
 
+        # draw the things that current buffer has
         current_text = self._buf_num_to_text[current_buffer.number]
         current_text.update_current_text(mode_info)
 
+        # hide folds
+        for buf_num in to_redraw:
+            text = self._buf_num_to_text[buf_num]
+            text.hide_folds()
+
+        # reposition all text boxes
         for text in self.get_root_texts():
             text.reposition()
 

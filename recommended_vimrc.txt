@@ -10,18 +10,31 @@ let g:bookmark_save_per_working_dir = 1
 let g:bookmark_auto_save = 1
 
 
-" to free up <C-i> for jump forward (Ctrl+i is the same keycode as Tab)
-nnoremap ,f <Plug>Markdown_Fold
-
-" use spaces, not tabs, for correct indent displaying
+function! Get_all_folds()
+  let l:folds = []
+  let l:lineno = 1
+  let l:endline = line('$')
+  while l:lineno <= l:endline
+    if foldclosed(l:lineno) != -1
+      let l:start = foldclosed(l:lineno)
+      let l:stop = foldclosedend(l:lineno)
+      call add(l:folds, [l:start, l:stop])
+      let l:lineno = l:stop + 1
+    else
+      let l:lineno = l:lineno + 1  
+    endif
+  endwhile
+  return l:folds
+endfunction
 
 """"""""""""""""""""""""""""
 " optional
-
-" " jump around with Ctrl+o and Ctrl+i
 
 " " autowrite:
 " autocmd TextChanged,TextChangedI <buffer> silent write
 
 " " disable enter mapping
 " map <Plug> <Plug>Markdown_FollowLink
+
+" use spaces, not tabs, for correct indent displaying
+" not sure, maybe tabs work too

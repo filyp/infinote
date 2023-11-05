@@ -40,24 +40,18 @@ class GraphicView(QGraphicsView):
         self.timer = None
         self._timer_last_update = None
 
-        # note: this bg may be unnecessary (dummy object is necessary though)
-        # create a background taking up all the space, to cover up glitches
-        # it also serves as a dummy object that can grab focus,
-        # so that the text boxes can be unfocused
-        bg = QGraphicsRectItem()
-        bg.setFlag(QGraphicsItem.ItemIsFocusable)
-        color = Config.background_color
-        bg.setBrush(QColor(color))
-        bg.setPen(QColor(color))
-        screen_size = self.screen().size()
-        bg.setRect(0, 0, screen_size.width(), screen_size.height())
-        self.scene().addItem(bg)
-        self.dummy = bg
+        # dummy object so that the text boxes can be unfocused
+        dummy = QGraphicsRectItem()
+        dummy.setFlag(QGraphicsItem.ItemIsFocusable)
+        self.scene().addItem(dummy)
+        self.dummy = dummy
 
         # create a status bar
+        screen_size = self.screen().size()
         self.status_bar = QStatusBar()
         # place it at the top and display
         self.status_bar.setGeometry(0, 0, screen_size.width(), 20)
+        color = Config.background_color
         self.status_bar.setStyleSheet("QStatusBar{background-color: " + color + ";}")
         self._message = []
         self.scene().addWidget(self.status_bar)
@@ -95,13 +89,14 @@ class GraphicView(QGraphicsView):
             item.pin_pos = (click_pos - item.plane_pos) / item.get_plane_scale()
         else:
             # clicked bg, so create a new text
-            self.buf_handler.create_text(
+            item = self.buf_handler.create_text(
                 self.current_folder, event.screenPos() / self.global_scale
             )
             self.buf_handler.update_all_texts()
 
         super().mousePressEvent(event)
-        self.dummy.setFocus()
+        # self.dummy.setFocus()
+        item.setFocus()
         self._render_status_bar()
 
     def keyPressEvent(self, event):

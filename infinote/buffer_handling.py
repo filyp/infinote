@@ -4,7 +4,7 @@ from pathlib import Path
 
 from config import Config
 from PySide6.QtCore import QPointF, Qt, QTimer
-from text_object import DraggableText
+from text_object import DraggableText, is_buf_empty
 
 # there are glitches when moving texts around
 # so redraw the background first
@@ -109,14 +109,6 @@ class BufferHandler:
         assert tab_num is not None, "file not found"
         self.nvim.command(f"tabnext {tab_num}")
 
-    def _is_buf_empty(self, buf):
-        if self.nvim.api.buf_line_count(buf) > 1:
-            return False
-        only_line = buf[0]
-        if only_line.strip() == "":
-            return True
-        return False
-
     def _delete_buf(self, buf):
         text = self._buf_num_to_text.get(buf.number)
 
@@ -144,7 +136,7 @@ class BufferHandler:
         # delete last buf if it's empty and unfocused
         if self.jumplist[-1] != current_buffer.number:
             _last_buf = self.nvim.buffers[self.jumplist[-1]]
-            if self._is_buf_empty(_last_buf):
+            if is_buf_empty(_last_buf):
                 self._delete_buf(_last_buf)
 
         # make sure current tab has the current buffer
@@ -284,7 +276,7 @@ class BufferHandler:
         self.jump_to_buffer(self.jumplist[-1])
         self._to_redraw.add(old)
         old_buf = self.nvim.buffers[old]
-        if self._is_buf_empty(old_buf):
+        if is_buf_empty(old_buf):
             self._delete_buf(old_buf)
 
     def jump_forward(self):
@@ -296,7 +288,7 @@ class BufferHandler:
         self.jumplist.append(new)
         self.jump_to_buffer(new)
         old_buf = self.nvim.buffers[old]
-        if self._is_buf_empty(old_buf):
+        if is_buf_empty(old_buf):
             self._delete_buf(old_buf)
 
     def reattach_text(self, parent_text, child_text):

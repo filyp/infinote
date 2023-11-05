@@ -16,6 +16,15 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import QGraphicsProxyWidget, QTextEdit
 
 
+def is_buf_empty(buf):
+    if len(buf) > 1:
+        return False
+    only_line = buf[0]
+    if only_line.strip() == "":
+        return True
+    return False
+
+
 class NonSelectableTextEdit(QTextEdit):
     def mousePressEvent(self, event):
         # Skip the mouse press event to prevent it from being handled by QTextBrowser
@@ -61,6 +70,11 @@ class DraggableText(QGraphicsProxyWidget):
         folds = self.nvim.command_output("echo Get_all_folds()")
         self.folds = json.loads(folds)
 
+        # optionally, send some input on creation
+        if is_buf_empty(self.buffer) and Config.input_on_node_creation:
+            self.nvim.command("startinsert")
+            self.nvim.input(Config.input_on_node_creation)
+
         if filename is None:
             # it's non-persistent buffer, so mark its border yellow
             dir_color = Config.non_persistent_dir_color
@@ -69,8 +83,8 @@ class DraggableText(QGraphicsProxyWidget):
         else:
             savedir = Path(filename).parent
             savedir_index = self.view.buf_handler.savedir_indexes[savedir]
-            savedir_index %= len(Config.dir_colors)
-            dir_color = Config.dir_colors[savedir_index]
+            savedir_index %= len(Config.border_colors)
+            dir_color = Config.border_colors[savedir_index]
             text_color = Config.text_colors[savedir_index]
             self.selection_color = Config.selection_colors[savedir_index]
         style = f"""
@@ -303,6 +317,12 @@ class DraggableText(QGraphicsProxyWidget):
         cursor = self.text_box.textCursor()
         cursor.setPosition(0)
         self.text_box.setTextCursor(cursor)
+
+        # set height
+        # for some reason it needs to be set already here, to prevent small glitch
+        # even though it's also set during repositioning
+        height = self._calculate_height()
+        self.text_box.setFixedHeight(height)
 
     def update_current_text(self, mode_info):
         # this function if called only if this node's buffer is the current buffer

@@ -28,7 +28,7 @@ class Config:
     key_zoom_speed = 3
 
     # https://blog.depositphotos.com/15-cyberpunk-color-palettes-for-dystopian-designs.html
-    dir_colors = [c.format(28) for c in _colors]
+    border_colors = [c.format(15) for c in _colors]
     text_colors = [c.format(80) for c in _colors]
     selection_colors = [c.format(23) for c in _colors]
     non_persistent_dir_color = _color_non_persistent.format(28)
@@ -56,8 +56,8 @@ class Config:
         "<A-S-m>": "move left",
         "<A-S-i>": "move right",
         # zooming
-        "<A-S->>": "zoom down",
-        "<A-S-k>": "zoom up",
+        "<A-S-k>": "zoom down",
+        "<A-S->>": "zoom up",
         # resizing box
         "<A-S-h>": "grow box",
         "<A-S-<>": "shrink box",
@@ -70,7 +70,9 @@ class Config:
         ",<S->>": "catch child right",
     }
 
-    FPS = 300
+    FPS = 180
+
+    input_on_node_creation = "- "
 
     ########################
     _initial_distance = (initial_position[0] ** 2 + initial_position[1] ** 2) ** 0.5

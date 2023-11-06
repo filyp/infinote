@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import List
 
 from config import Config
-from PySide6.QtCore import QPointF, Qt, QTimer
+from PySide6.QtCore import QPointF
 from text_object import DraggableText, is_buf_empty
 
 # there are glitches when moving texts around
@@ -358,6 +358,13 @@ class BufferHandler:
         # reposition all text boxes
         for text in self.get_root_texts():
             text.reposition()
+
+        # # set heights once more
+        # # for some reason it needs to be set already here, to prevent small glitch
+        # # even though it's also set during repositioning
+        # for text in self.get_texts():
+        #     height = text._calculate_height()
+        #     text.text_box.setFixedHeight(height)
 
         for buf_num, extmarks in all_extmarks.items():
             if extmarks != []:

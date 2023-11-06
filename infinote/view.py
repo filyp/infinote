@@ -1,19 +1,15 @@
 import time
-from pathlib import Path
 
-import pynvim
 from buffer_handling import BufferHandler
 from config import Config
-from key_handler import KeyHandler, parse_key_event_into_text
-from PySide6.QtCore import QPointF, Qt, QTimer
-from PySide6.QtGui import QColor, QFont, QPainter, QPixmap
+from key_handler import KeyHandler
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor, QPainter
 from PySide6.QtWidgets import (
-    QApplication,
     QGraphicsItem,
     QGraphicsRectItem,
     QGraphicsScene,
     QGraphicsView,
-    QMainWindow,
     QStatusBar,
     QTextBrowser,
 )

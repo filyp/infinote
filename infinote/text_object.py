@@ -1,10 +1,8 @@
-import json
-import re
 import time
 from pathlib import Path
 
 from config import Config
-from PySide6.QtCore import QPoint, QPointF
+from PySide6.QtCore import QPointF
 from PySide6.QtGui import (
     QColor,
     QFont,
@@ -101,7 +99,7 @@ class DraggableText(QGraphicsProxyWidget):
                 background: {Config.background_color};
             }}
             QScrollBar::handle:vertical {{
-                background-color: {self.selection_color};
+                background-color: {dir_color};
             }}
         """
         # box-shadow: 0px 0px 5px 0px {dir_color};
@@ -212,17 +210,9 @@ class DraggableText(QGraphicsProxyWidget):
         # save it
         nvim.command("w")
 
-    def highlight(self, color_style, start, end):
-        match = re.match("hsl\((\d+), (\d+)%, (\d+)%\)", color_style)
-        if match:
-            h = int(match[1])
-            s = int(int(match[2]) * 255 / 100)
-            l = int(int(match[3]) * 255 / 100)
-            color = QColor()
-            color.setHsl(h, s, l)
-        else:
-            color = QColor(color_style)
-
+    def highlight(self, color, start, end):
+        if not isinstance(color, QColor):
+            color = QColor(color)
         color_format = QTextCharFormat()
         color_format.setBackground(color)
 
@@ -311,12 +301,6 @@ class DraggableText(QGraphicsProxyWidget):
         cursor = self.text_box.textCursor()
         cursor.setPosition(0)
         self.text_box.setTextCursor(cursor)
-
-        # set height
-        # for some reason it needs to be set already here, to prevent small glitch
-        # even though it's also set during repositioning
-        height = self._calculate_height()
-        self.text_box.setFixedHeight(height)
 
     def update_current_text(self, mode_info, cur_buf_info, lines):
         # this function if called only if this node's buffer is the current buffer

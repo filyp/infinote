@@ -1,7 +1,6 @@
-import sys
+import re
 
-import pynvim
-from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QColor
 
 _colors = ["hsl(184, 96%, {}%)", "hsl(64, 96%, {}%)", "hsl(136, 96%, {}%)"]
 _color_non_persistent = "hsl(341, 96%, {}%)"
@@ -29,6 +28,19 @@ colemak_keys = {
 }
 
 
+def _parse_color(color_style):
+    match = re.match("hsl\((\d+), (\d+)%, (\d+)%\)", color_style)
+    if match:
+        h = int(match[1])
+        s = int(int(match[2]) * 255 / 100)
+        l = int(int(match[3]) * 255 / 100)
+        color = QColor()
+        color.setHsl(h, s, l)
+    else:
+        color = QColor(color_style)
+    return color
+
+
 class Config:
     autoshrink = True
     text_width = 300
@@ -50,13 +62,13 @@ class Config:
     key_zoom_speed = 3
 
     # https://blog.depositphotos.com/15-cyberpunk-color-palettes-for-dystopian-designs.html
+    background_color = "#000000"
     border_colors = [c.format(15) for c in _colors]
     text_colors = [c.format(80) for c in _colors]
     selection_colors = [c.format(23) for c in _colors]
     non_persistent_dir_color = _color_non_persistent.format(28)
     non_persistent_text_color = _color_non_persistent.format(80)
     non_persistent_selection_color = _color_non_persistent.format(23)
-    background_color = "#000000"
     sign_color = "hsl(289, 100%, 12%)"
 
     leader_key = ","
@@ -75,9 +87,14 @@ class Config:
     }
     keys.update(colemak_keys)
 
+    # relevant for zooming and resizing with keys
     FPS = 120
 
     input_on_creation = "- "
 
     ########################
+    # don't tweak those - those are automatic calculations
     _initial_distance = (initial_position[0] ** 2 + initial_position[1] ** 2) ** 0.5
+
+    sign_color = _parse_color(sign_color)
+    selection_colors = [_parse_color(c) for c in selection_colors]

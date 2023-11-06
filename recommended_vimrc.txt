@@ -10,7 +10,7 @@ let g:bookmark_save_per_working_dir = 1
 let g:bookmark_auto_save = 1
 
 
-function! Get_all_folds()
+function! GetAllFolds()
   let l:folds = []
   let l:lineno = 1
   let l:endline = line('$')
@@ -28,7 +28,7 @@ function! Get_all_folds()
 endfunction
 
 
-function! Go_to_tab_with_buffer(bufnr)
+function! GoToTabWithBuffer(bufnr)
   let l:bufnr = a:bufnr
   let l:tabnr = tabpagenr()
   let l:totaltabs = tabpagenr('$')
@@ -42,7 +42,6 @@ function! Go_to_tab_with_buffer(bufnr)
       endif
     endfor
   endfor
-
   " If buffer is not found in any tab, keep the focus on the original tab.
   execute l:tabnr . 'tabnext'
 endfunction

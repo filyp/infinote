@@ -3,10 +3,6 @@ import time
 from config import Config
 from PySide6.QtCore import Qt, QTimer
 
-# # getting cmd output, but it's blocking:
-# out = self.nvim.command_output(self.command)
-# print(f"output: '{out}'")
-
 
 def parse_key_event_into_text(event):
     special_keys = {
@@ -89,6 +85,11 @@ class KeyHandler:
         text = parse_key_event_into_text(event)
         if text is None:
             return
+        
+        if text in Config.keys:
+            # custom command pressed
+            self.handle_custom_command(text)
+            return
 
         mode = self.nvim.api.get_mode()["mode"]
         assert mode != "c", "there should be no way to get into command mode"
@@ -96,6 +97,8 @@ class KeyHandler:
             # send that key
             self.nvim.input(text)
             return
+        
+        # if we're here, we're in normal mode
 
         # handle custom commands
         if self._leader_key_last_pressed:
@@ -107,11 +110,6 @@ class KeyHandler:
         if self.command_mode or self.search_mode or self.backward_search_mode:
             # eat the keypress into self.command
             self._absorb_key_into_command_line(text, event)
-            return
-
-        if text in Config.keys:
-            # custom command pressed
-            self.handle_custom_command(text)
             return
 
         match text:

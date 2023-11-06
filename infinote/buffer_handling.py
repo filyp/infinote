@@ -78,7 +78,7 @@ class BufferHandler:
     def jump_to_buffer(self, buf_num):
         # jumping with ":buf <num>" would make some buffers hidden and break leap
         # so we need to jump to the right tab instead
-        self.nvim.command(f"call Go_to_tab_with_buffer({buf_num})")
+        self.nvim.command(f"call GoToTabWithBuffer({buf_num})")
 
     def jump_to_file(self, filename):
         # jumping straight to the file would make some buffers hidden and break leap
@@ -99,7 +99,7 @@ class BufferHandler:
         assert tab_num is not None, "file not found"
         self.nvim.command(f"tabnext {tab_num}")
 
-    def _delete_buf(self, buf):
+    def delete_buf(self, buf):
         text = self._buf_num_to_text.get(buf.number)
 
         if text.filename is not None:
@@ -171,8 +171,8 @@ class BufferHandler:
         self.jump_to_buffer(self.jumplist[-1])
         self._to_redraw.add(old)
         old_buf = self.nvim.buffers[old]
-        if is_buf_empty(old_buf):
-            self._delete_buf(old_buf)
+        if is_buf_empty(old_buf) or old_buf[:] == [Config.input_on_creation]:
+            self.delete_buf(old_buf)
 
     def jump_forward(self):
         if len(self.forward_jumplist) == 0:
@@ -183,8 +183,8 @@ class BufferHandler:
         self.jumplist.append(new)
         self.jump_to_buffer(new)
         old_buf = self.nvim.buffers[old]
-        if is_buf_empty(old_buf):
-            self._delete_buf(old_buf)
+        if is_buf_empty(old_buf) or old_buf[:] == [Config.input_on_creation]:
+            self.delete_buf(old_buf)
 
     def reattach_text(self, parent_text, child_text):
         child_text.detach_parent()
@@ -218,8 +218,9 @@ class BufferHandler:
         # delete last buf if it's empty and unfocused
         if self.jumplist[-1] != current_buffer.number:
             _last_buf = self.nvim.buffers[self.jumplist[-1]]
-            if is_buf_empty(_last_buf):
-                self._delete_buf(_last_buf)
+            if is_buf_empty(_last_buf) or _last_buf[:] == [Config.input_on_creation]:
+                self.delete_buf(_last_buf)
+            current_buffer = self.nvim.current.buffer
 
         # make sure current tab has the current buffer
         # get the num of wins in this tab
@@ -232,12 +233,17 @@ class BufferHandler:
                 # delete its window
                 win = bufs_in_tab[unb_buf]
                 self.nvim.api.win_close(win, True)
+            current_buffer = self.nvim.current.buffer
 
         # if hidden buffer focused, focus on the last chosen text
         if current_buffer.number not in self._buf_num_to_text:
             self.jump_to_buffer(self.jumplist[-1])
+            current_buffer = self.nvim.current.buffer
+        
+        return current_buffer
 
     def update_all_texts(self):
+        start = time.time()
         mode_info = self.nvim.api.get_mode()
         if mode_info["blocking"]:
             return
@@ -248,22 +254,22 @@ class BufferHandler:
         # (it's better to do this once and pass around, bc every nvim api query is ~3ms)
         self._to_redraw.add(self.jumplist[-1])
 
-        self._sanitize_buffers()
-        current_buffer = self.nvim.current.buffer
+        # (note: sanitize_buffers can change the current buffer)
+        current_buf = self._sanitize_buffers()
 
         # catch children
-        if self.jumplist[-1] != current_buffer.number and self.catch_child is not None:
+        if self.jumplist[-1] != current_buf.number and self.catch_child is not None:
             parent_text = self._buf_num_to_text[self.jumplist[-1]]
-            child_text = self._buf_num_to_text[current_buffer.number]
+            child_text = self._buf_num_to_text[current_buf.number]
             self.reattach_text(parent_text, child_text)
             self.catch_child = None
 
         # grow jumplist
         if (
-            current_buffer.number != self.jumplist[-1]
-            and current_buffer.number in self._buf_num_to_text
+            current_buf.number != self.jumplist[-1]
+            and current_buf.number in self._buf_num_to_text
         ):
-            self.jumplist.append(current_buffer.number)
+            self.jumplist.append(current_buf.number)
             self.forward_jumplist = []
             self.jumplist = self.jumplist[-10:]
 
@@ -273,15 +279,28 @@ class BufferHandler:
         # but when it comes to leap marks, they are only present iff current buffer
         # has some too
         get_extmarks = [] != self.nvim.api.buf_get_extmarks(
-            current_buffer.number, -1, (0, 0), (-1, -1), {}
+            current_buf.number, -1, (0, 0), (-1, -1), {}
         )
+        
+
+        # # get all relevalt data in a batched call
+        # wins, out, out2 = self.nvim.api.call_atomic([
+        #     ["nvim_buf_get_extmarks", [current_buf.number, -1, (0, 0), (-1, -1), {}]],
+        #     ["nvim_eval", ['GetAllFolds()']],
+        #     ["nvim_eval", ['getpos("v")']],
+        #     ["nvim_eval", ['getpos(".")']],
+        #     # also get lines for each redrawn buffer
+        #     # and if get_marks, get all marks
+        #     # later also get highlight info of bookmarks
+        # ])[0]
+
 
         # choose which ones to redraw
         if get_extmarks or self._full_redraw_on_next_update:
             # redraw all
             to_redraw = set(self._buf_num_to_text.keys())
         else:
-            self._to_redraw.add(current_buffer.number)
+            self._to_redraw.add(current_buf.number)
             to_redraw = self._to_redraw & self._buf_num_to_text.keys()
         self._to_redraw = set()
 
@@ -291,7 +310,7 @@ class BufferHandler:
             text.update_text(get_extmarks)
 
         # draw the things that current buffer has
-        current_text = self._buf_num_to_text[current_buffer.number]
+        current_text = self._buf_num_to_text[current_buf.number]
         current_text.update_current_text(mode_info)
 
         # hide folds
@@ -304,3 +323,4 @@ class BufferHandler:
             text.reposition()
 
         self._full_redraw_on_next_update = get_extmarks
+        print(time.time() - start)

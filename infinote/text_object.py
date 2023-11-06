@@ -67,13 +67,12 @@ class DraggableText(QGraphicsProxyWidget):
 
         # get folds for potential future fold drawing
         assert self.buffer == self.nvim.current.buffer
-        folds = self.nvim.command_output("echo Get_all_folds()")
-        self.folds = json.loads(folds)
+        self.folds = self.nvim.eval("GetAllFolds()")
 
         # optionally, send some input on creation
-        if is_buf_empty(self.buffer) and Config.input_on_node_creation:
+        if is_buf_empty(self.buffer) and Config.input_on_creation:
             self.nvim.command("startinsert")
-            self.nvim.input(Config.input_on_node_creation)
+            self.nvim.input(Config.input_on_creation)
 
         if filename is None:
             # it's non-persistent buffer, so mark its border yellow
@@ -367,8 +366,7 @@ class DraggableText(QGraphicsProxyWidget):
         self.text_box.setTextCursor(cursor)
 
         # get folds for potential future fold drawing
-        folds = self.nvim.command_output("echo Get_all_folds()")
-        self.folds = json.loads(folds)
+        self.folds = self.nvim.eval("GetAllFolds()")
 
     def hide_folds(self):
         # set folds

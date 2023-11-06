@@ -7,65 +7,28 @@ _colors = ["hsl(184, 96%, {}%)", "hsl(64, 96%, {}%)", "hsl(136, 96%, {}%)"]
 _color_non_persistent = "hsl(341, 96%, {}%)"
 
 colemak_keys = {
-    # hop to any text using leap plugin
-    ",h": "hop",
-    # when in bookmarks window, jump to location of bookmark under cursor
-    ",b": "bookmark jump",
-    # zoom on the current text box
-    ",z": "zoom on current text",
-    # create a child of the current text box, down of it
-    ",<Space>": "create child down",
-    # create a child of the current text box, right of it
-    ",.": "create child right",
-    # move to the down child
+    # move to neighbors
     "<A-S-n>": "move down",
     "<A-S-e>": "move up",
     "<A-S-m>": "move left",
     "<A-S-i>": "move right",
-    # zooming
-    "<A-S-k>": "zoom down",
-    "<A-S->>": "zoom up",
-    # resizing box
-    "<A-S-h>": "grow box",
-    "<A-S-<>": "shrink box",
-    # custom C-o and C-i, because normal ones create unwanted buffers
-    "<C-o>": "jump back",
-    "<C-i>": "jump forward",
-    # catch a child and insert it down
-    ",<S-Space>": "catch child down",
-    # catch a child and insert it right
-    ",<S->>": "catch child right",
-}
 
-qwerty_keys = {
-    # hop to any text using leap plugin
-    ",h": "hop",
-    # when in bookmarks window, jump to location of bookmark under cursor
-    ",b": "bookmark jump",
-    # zoom on the current text box
-    ",z": "zoom on current text",
     # create a child of the current text box, down of it
-    ",<Space>": "create child down",
+    "<A-n>": "create child down",
     # create a child of the current text box, right of it
-    ",.": "create child right",
-    # move to the down child
-    "<A-S-j>": "move down",
-    "<A-S-k>": "move up",
-    "<A-S-h>": "move left",
-    "<A-S-l>": "move right",
-    # zooming
-    "<A-S-n>": "zoom down",
-    "<A-S->>": "zoom up",
-    # resizing box
-    "<A-S-m>": "grow box",
-    "<A-S-<>": "shrink box",
-    # custom C-o and C-i, because normal ones create unwanted buffers
-    "<C-o>": "jump back",
-    "<C-i>": "jump forward",
+    "<A-i>": "create child right",
+
     # catch a child and insert it down
-    ",<S-Space>": "catch child down",
+    "<A-C-n>": "catch child down",
     # catch a child and insert it right
-    ",<S->>": "catch child right",
+    "<A-C-i>": "catch child right",
+
+    # zooming
+    "<C-j>": "zoom down",
+    "<C-y>": "zoom up",
+    # resizing box
+    "<C-l>": "grow box",
+    "<C-u>": "shrink box",
 }
 
 
@@ -80,7 +43,7 @@ class Config:
     font_sizes = [12, 12, 12, 12, 10, 10, 10, 10, 8, 8, 8, 8]
 
     # whether to change zoom level only on jumps to a neighbor text
-    track_jumps_on_neighbor_moves = True
+    track_jumps_on_neighbor_moves = False
 
     # closer to 1 is slower (must be larger than 1)
     scroll_speed = 1.0005
@@ -100,12 +63,23 @@ class Config:
 
     leader_key = ","
     # supported single key codes, and single key codes preceded with leader key
-    # (note: the order of modifiers murt be M-, A-, S-, C-)
-    keys = colemak_keys
+    # (note: the order of modifiers must be M-, A-, S-, C-)
+    keys = {
+        # hop to any text using leap plugin
+        ",h": "hop",
+        # when in bookmarks window, jump to location of bookmark under cursor
+        ",b": "bookmark jump",
+        # zoom on the current text box
+        ",z": "zoom on current text",
+        # custom C-o and C-i, because normal ones create unwanted buffers
+        "<C-o>": "jump back",
+        "<C-i>": "jump forward",
+    }
+    keys.update(colemak_keys)
 
-    FPS = 180
+    FPS = 120
 
-    input_on_node_creation = "- "
+    input_on_creation = "- "
 
     ########################
     _initial_distance = (initial_position[0] ** 2 + initial_position[1] ** 2) ** 0.5

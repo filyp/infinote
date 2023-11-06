@@ -59,6 +59,7 @@ class DraggableText(QGraphicsProxyWidget):
         self.pin_pos = None
         self.folds = []
         self.sign_lines = []
+        self._height = 0
 
         self.text_box = NonSelectableTextEdit()
         self.text_box.setFixedWidth(Config.text_width)
@@ -137,6 +138,15 @@ class DraggableText(QGraphicsProxyWidget):
         self.setScale(self.get_plane_scale() * global_scale)
         self.setPos(self.plane_pos * global_scale)
 
+        # set height
+        # for some reason it needs to be done twice, to prevent a glitch
+        # only the smaller of those two heights is valid
+        height = self._calculate_height()
+        self.text_box.setFixedHeight(height)
+        height = min(self._calculate_height(), height)
+        self.text_box.setFixedHeight(height)
+        self._height = height
+
         self.place_down_children()
         self.place_right_children()
 
@@ -185,7 +195,8 @@ class DraggableText(QGraphicsProxyWidget):
         return self.get_plane_scale() * Config.text_width
 
     def get_plane_height(self):
-        return self.get_plane_scale() * self._calculate_height()
+        # this needs to be called only after this node's reposition
+        return self.get_plane_scale() * self._height
 
     # text related functions:
 

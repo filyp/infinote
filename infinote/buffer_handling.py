@@ -158,7 +158,6 @@ class BufferHandler:
             raise ValueError("side must be 'right' or 'down'")
 
         child.parent = current_text
-        current_text.reposition()
 
         if Config.track_jumps_on_neighbor_moves:
             self.view.track_jump(current_text, child)
@@ -358,12 +357,6 @@ class BufferHandler:
         # reposition all text boxes
         for text in self.get_root_texts():
             text.reposition()
-
-        # set heights
-        # for some reason it needs to be done twice, to prevent a glitch
-        for text in self.get_texts():
-            text.text_box.setFixedHeight(text._calculate_height())
-            text.text_box.setFixedHeight(text._calculate_height())
 
         for buf_num, extmarks in all_extmarks.items():
             if extmarks != []:

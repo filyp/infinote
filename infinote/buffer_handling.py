@@ -309,7 +309,7 @@ class BufferHandler:
         ):
             self.jumplist.append(current_buf.number)
             self.forward_jumplist = []
-            self.jumplist = self.jumplist[-10:]
+            self.jumplist = self.jumplist[-30:]
 
         ####################################################
         # redraw

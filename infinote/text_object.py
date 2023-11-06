@@ -5,7 +5,6 @@ from config import Config
 from PySide6.QtCore import QPointF
 from PySide6.QtGui import (
     QColor,
-    QFont,
     QFontMetrics,
     QTextBlockFormat,
     QTextCharFormat,
@@ -253,11 +252,10 @@ class DraggableText(QGraphicsProxyWidget):
                 real_indent = 0
 
             if real_indent < len(Config.font_sizes):
-                font_size = Config.font_sizes[real_indent]
+                font = Config.fonts[real_indent]
             else:
-                font_size = Config.font_sizes[-1]
+                font = Config.fonts[-1]
 
-            font = QFont("monospace", font_size)
             font_format = QTextCharFormat()
             font_format.setFont(font)
             cursor.setCharFormat(font_format)

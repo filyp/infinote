@@ -1,6 +1,6 @@
 import re
 
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QFont
 
 _colors = ["hsl(184, 96%, {}%)", "hsl(64, 96%, {}%)", "hsl(136, 96%, {}%)"]
 _color_non_persistent = "hsl(341, 96%, {}%)"
@@ -88,7 +88,7 @@ class Config:
     keys.update(colemak_keys)
 
     # relevant for zooming and resizing with keys
-    FPS = 120
+    FPS = 180
 
     input_on_creation = "- "
 
@@ -98,3 +98,4 @@ class Config:
 
     sign_color = _parse_color(sign_color)
     selection_colors = [_parse_color(c) for c in selection_colors]
+    fonts = [QFont("monospace", fs) for fs in font_sizes]

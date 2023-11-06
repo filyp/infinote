@@ -359,12 +359,11 @@ class BufferHandler:
         for text in self.get_root_texts():
             text.reposition()
 
-        # # set heights once more
-        # # for some reason it needs to be set already here, to prevent small glitch
-        # # even though it's also set during repositioning
-        # for text in self.get_texts():
-        #     height = text._calculate_height()
-        #     text.text_box.setFixedHeight(height)
+        # set heights
+        # for some reason it needs to be done twice, to prevent a glitch
+        for text in self.get_texts():
+            text.text_box.setFixedHeight(text._calculate_height())
+            text.text_box.setFixedHeight(text._calculate_height())
 
         for buf_num, extmarks in all_extmarks.items():
             if extmarks != []:

@@ -137,10 +137,6 @@ class DraggableText(QGraphicsProxyWidget):
         self.setScale(self.get_plane_scale() * global_scale)
         self.setPos(self.plane_pos * global_scale)
 
-        # set height
-        height = self._calculate_height()
-        self.text_box.setFixedHeight(height)
-
         self.place_down_children()
         self.place_right_children()
 

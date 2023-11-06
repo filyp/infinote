@@ -23,9 +23,6 @@ from view import GraphicView
 
 # TODO
 # record some demo
-# maybe batch commands to nvim api
-#  now each key press takes optimistically 30ms, and if we jump with extmark even more
-#  additionally jumping to buffers takes 12ms
 # look into syncing with syncthing
 #  or using attach nvim with tcp
 #  everyone has their own folder
@@ -39,7 +36,6 @@ from view import GraphicView
 # if I even want to optimize, I shouldn't draw all the texts on each keypress
 #  instead draw onl the changed, and redraw the rest is s was pressed
 # save web of transitions with timestamps
-# highlight bookmarks
 # make ** text bold
 # box shadows
 #  https://stackoverflow.com/questions/13962228/how-do-i-add-a-box-shadow-to-an-element-in-qt

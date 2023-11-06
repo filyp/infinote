@@ -92,7 +92,7 @@ class KeyHandler:
             return
 
         mode = self.nvim.api.get_mode()["mode"]
-        assert mode != "c", "there should be no way to get into command mode"
+        # assert mode != "c", "there should be no way to get into command mode"
         if mode != "n":
             # send that key
             self.nvim.input(text)

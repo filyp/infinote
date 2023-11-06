@@ -57,6 +57,7 @@ class Config:
     non_persistent_text_color = _color_non_persistent.format(80)
     non_persistent_selection_color = _color_non_persistent.format(23)
     background_color = "#000000"
+    sign_color = "hsl(289, 100%, 12%)"
 
     leader_key = ","
     # supported single key codes, and single key codes preceded with leader key

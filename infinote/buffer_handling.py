@@ -249,6 +249,7 @@ class BufferHandler:
             ["nvim_eval", ['getpos("v")']],
             ["nvim_eval", ['getpos(".")']],
             ["nvim_win_get_cursor", [0]],
+            ["nvim_eval", ["sign_getplaced()"]],
         ]
         for buf_num in to_fetch:
             functions.append(["nvim_buf_get_lines", [buf_num, 0, -1, False]])
@@ -268,6 +269,7 @@ class BufferHandler:
             selection_start=results.popleft(),
             selection_end=results.popleft(),
             cursor_position=results.popleft(),
+            bookmark_info=results.popleft(),
         )
 
         all_lines = dict()
@@ -281,7 +283,6 @@ class BufferHandler:
         return cur_buf_info, all_lines, all_extmarks
 
     def update_all_texts(self):
-        start = time.time()
         mode_info = self.nvim.api.get_mode()
         if mode_info["blocking"]:
             return
@@ -345,12 +346,14 @@ class BufferHandler:
 
         # draw the things that current buffer has
         current_text = self.buf_num_to_text[current_buf.number]
-        current_text.update_current_text(mode_info, cur_buf_info)
+        lines = all_lines[current_buf.number]
+        current_text.update_current_text(mode_info, cur_buf_info, lines)
 
-        # hide folds
+        # hide folds and draw sign lines
         for buf_num in to_redraw:
             text = self.buf_num_to_text[buf_num]
             text.hide_folds()
+            text.draw_sign_lines(all_lines[buf_num])
 
         # reposition all text boxes
         for text in self.get_root_texts():
@@ -359,4 +362,3 @@ class BufferHandler:
         for buf_num, extmarks in all_extmarks.items():
             if extmarks != []:
                 self.to_redraw.add(buf_num)
-        print(time.time() - start)

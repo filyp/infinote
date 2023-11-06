@@ -60,6 +60,7 @@ class DraggableText(QGraphicsProxyWidget):
         self.parent = None
         self.pin_pos = None
         self.folds = []
+        self.sign_lines = []
 
         self.text_box = NonSelectableTextEdit()
         self.text_box.setFixedWidth(Config.text_width)
@@ -67,6 +68,9 @@ class DraggableText(QGraphicsProxyWidget):
         # get folds for potential future fold drawing
         assert self.buffer == nvim.current.buffer
         self.folds = nvim.eval("GetAllFolds()")
+
+        signs = nvim.eval("sign_getplaced()")
+        self._set_sign_lines(signs)
 
         # optionally, send some input on creation
         if is_buf_empty(self.buffer) and Config.input_on_creation:
@@ -314,12 +318,15 @@ class DraggableText(QGraphicsProxyWidget):
         height = self._calculate_height()
         self.text_box.setFixedHeight(height)
 
-    def update_current_text(self, mode_info, cur_buf_info):
+    def update_current_text(self, mode_info, cur_buf_info, lines):
         # this function if called only if this node's buffer is the current buffer
         mode = mode_info["mode"]
 
         # get folds for potential future fold drawing
         self.folds = cur_buf_info["folds"]
+
+        # get highlight bookmarks for potential future drawing
+        self._set_sign_lines(cur_buf_info["bookmark_info"])
 
         # set selection
         if mode == "v" or mode == "V" or mode == "\x16":
@@ -333,7 +340,7 @@ class DraggableText(QGraphicsProxyWidget):
         elif mode == "V":
             # extend selection to full line
             s[1] = 1
-            e[1] = len(self.buffer[e[0] - 1])
+            e[1] = len(lines[e[0] - 1])
             self.highlight(self.selection_color, s, e)
         elif mode == "\x16":
             # visual block selection
@@ -385,3 +392,15 @@ class DraggableText(QGraphicsProxyWidget):
             else:
                 block = block.next()
             line_num += 1
+
+    def draw_sign_lines(self, lines):
+        for sign_line in self.sign_lines:
+            line_width = len(lines[sign_line - 1])
+            self.highlight(Config.sign_color, (sign_line, 1), (sign_line, line_width))
+
+    def _set_sign_lines(self, signs):
+        if signs != []:
+            signs = signs[0]["signs"]
+            self.sign_lines = [sign["lnum"] for sign in signs]
+        else:
+            self.sign_lines = []

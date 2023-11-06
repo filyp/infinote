@@ -351,8 +351,8 @@ class BufferHandler:
         # hide folds and draw sign lines
         for buf_num in to_redraw:
             text = self.buf_num_to_text[buf_num]
-            text.hide_folds()
             text.draw_sign_lines(all_lines[buf_num])
+            text.hide_folds()
 
         # reposition all text boxes
         for text in self.get_root_texts():

@@ -12,17 +12,14 @@ colemak_keys = {
     "<A-S-e>": "move up",
     "<A-S-m>": "move left",
     "<A-S-i>": "move right",
-
     # create a child of the current text box, down of it
     "<A-n>": "create child down",
     # create a child of the current text box, right of it
     "<A-i>": "create child right",
-
     # catch a child and insert it down
     "<A-C-n>": "catch child down",
     # catch a child and insert it right
     "<A-C-i>": "catch child right",
-
     # zooming
     "<C-j>": "zoom down",
     "<C-y>": "zoom up",
@@ -35,7 +32,7 @@ colemak_keys = {
 class Config:
     autoshrink = True
     text_width = 300
-    text_max_height = text_width * 1  # * 1.618
+    text_max_height = text_width * 1.618
     initial_position = (500, 40)
     text_gap = 6
     starting_box_scale = 0.7

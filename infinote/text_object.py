@@ -49,7 +49,6 @@ class DraggableText(QGraphicsProxyWidget):
         self.autoshrink = Config.autoshrink
 
         # note that num doesn't need to be the same as buffer_handle.number
-        self.nvim = nvim
         self.buffer = buffer_handle
         self.filename = filename
         self.view = view
@@ -66,13 +65,13 @@ class DraggableText(QGraphicsProxyWidget):
         self.text_box.setFixedWidth(Config.text_width)
 
         # get folds for potential future fold drawing
-        assert self.buffer == self.nvim.current.buffer
-        self.folds = self.nvim.eval("GetAllFolds()")
+        assert self.buffer == nvim.current.buffer
+        self.folds = nvim.eval("GetAllFolds()")
 
         # optionally, send some input on creation
         if is_buf_empty(self.buffer) and Config.input_on_creation:
-            self.nvim.command("startinsert")
-            self.nvim.input(Config.input_on_creation)
+            nvim.command("startinsert")
+            nvim.input(Config.input_on_creation)
 
         if filename is None:
             # it's non-persistent buffer, so mark its border yellow
@@ -192,7 +191,7 @@ class DraggableText(QGraphicsProxyWidget):
 
     # text related functions:
 
-    def save(self):
+    def save(self, nvim):
         if self.filename is None:
             # this buffer was not created by this program, so don't save it
             return
@@ -205,9 +204,9 @@ class DraggableText(QGraphicsProxyWidget):
         assert buf_filename == self.filename, (buf_filename, self.filename)
 
         # set this buffer as current
-        self.nvim.api.set_current_buf(self.buffer.number)
+        nvim.api.set_current_buf(self.buffer.number)
         # save it
-        self.nvim.command("w")
+        nvim.command("w")
 
     def highlight(self, color_style, start, end):
         match = re.match("hsl\((\d+), (\d+)%, (\d+)%\)", color_style)
@@ -269,9 +268,7 @@ class DraggableText(QGraphicsProxyWidget):
 
             self.text_box.setTextCursor(cursor)
 
-    def update_text(self, get_marks):
-        lines = self.buffer[:]
-
+    def update_text(self, lines, extmarks):
         # maybeTODO optimization:
         # only during leaps all of the texts will be redrawn, so that can
         # become really slow - otherwise it's ok
@@ -283,21 +280,15 @@ class DraggableText(QGraphicsProxyWidget):
                 lines[i] = " "
 
         # set marks text (mainly for the leap plugin)
-        if get_marks:
-            marks = self.nvim.api.buf_get_extmarks(
-                self.buffer.number, -1, (0, 0), (-1, -1), {"details": True}
-            )
-        else:
-            marks = []
         mark_positions = []
-        for _, y, x, details in marks:
+        for _, y, x, details in extmarks:
             virt_text = details["virt_text"]
             assert len(virt_text) == 1, virt_text
             char, type_ = virt_text[0]
             if type_ == "Cursor":
                 continue
             # maybeTODO later relax this?
-            assert type_ == "LeapLabelPrimary" or type_ == "LeapLabelSecondary", marks
+            assert type_ in ["LeapLabelPrimary", "LeapLabelSecondary"], extmarks
             # put that char into text
             lines[y] = lines[y][:x] + char + lines[y][x + 1 :]
             mark_positions.append((y, x))
@@ -323,15 +314,17 @@ class DraggableText(QGraphicsProxyWidget):
         height = self._calculate_height()
         self.text_box.setFixedHeight(height)
 
-    def update_current_text(self, mode_info):
+    def update_current_text(self, mode_info, cur_buf_info):
         # this function if called only if this node's buffer is the current buffer
-
         mode = mode_info["mode"]
+
+        # get folds for potential future fold drawing
+        self.folds = cur_buf_info["folds"]
 
         # set selection
         if mode == "v" or mode == "V" or mode == "\x16":
-            s = self.nvim.eval('getpos("v")')[1:3]
-            e = self.nvim.eval('getpos(".")')[1:3]
+            s = cur_buf_info["selection_start"][1:3]
+            e = cur_buf_info["selection_end"][1:3]
             # if end before start, swap
             if s[0] > e[0] or (s[0] == e[0] and s[1] > e[1]):
                 s, e = e, s
@@ -350,7 +343,7 @@ class DraggableText(QGraphicsProxyWidget):
                 self.highlight(self.selection_color, (y, x_start), (y, x_end))
 
         # set cursor
-        curs_y, curs_x = self.nvim.current.window.cursor
+        curs_y, curs_x = cur_buf_info["cursor_position"]
         pos = self._yx_to_pos(curs_y, curs_x)
         cursor = self.text_box.textCursor()
         if mode == "n":
@@ -364,9 +357,6 @@ class DraggableText(QGraphicsProxyWidget):
             # set the cursor pos anyway, so that in visual widget scrolls to it
             cursor.setPosition(pos)
         self.text_box.setTextCursor(cursor)
-
-        # get folds for potential future fold drawing
-        self.folds = self.nvim.eval("GetAllFolds()")
 
     def hide_folds(self):
         # set folds

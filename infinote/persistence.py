@@ -76,4 +76,4 @@ def save_scene(view: QGraphicsView, savedirs: List[Path]):
     #########################################
     # save each text
     for text in view.buf_handler.get_texts():
-        text.save()
+        text.save(view.nvim)

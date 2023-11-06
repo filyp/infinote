@@ -105,6 +105,7 @@ if __name__ == "__main__":
             Config.text_width * text.get_plane_scale() * view.global_scale
         )
     view.zoom_on_current_text()
+    buf_handler.to_redraw.update(buf_handler.buf_num_to_text.keys())
 
     buf_handler.jumplist = [None, nvim.current.buffer.number]
     buf_handler.update_all_texts()

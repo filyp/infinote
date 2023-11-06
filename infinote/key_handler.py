@@ -85,7 +85,7 @@ class KeyHandler:
         text = parse_key_event_into_text(event)
         if text is None:
             return
-        
+
         if text in Config.keys:
             # custom command pressed
             self.handle_custom_command(text)
@@ -97,7 +97,7 @@ class KeyHandler:
             # send that key
             self.nvim.input(text)
             return
-        
+
         # if we're here, we're in normal mode
 
         # handle custom commands

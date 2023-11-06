@@ -1,6 +1,7 @@
 import time
-from collections import defaultdict
+from collections import defaultdict, deque
 from pathlib import Path
+from typing import List
 
 from config import Config
 from PySide6.QtCore import QPointF, Qt, QTimer
@@ -19,15 +20,14 @@ class BufferHandler:
         self.view = view
         self.jumplist = None  # must be set by view
         self.last_file_nums = defaultdict(lambda: 0)
-        self._buf_num_to_text = {}
+        self.buf_num_to_text = {}
         self.forward_jumplist = []
         self.savedir_indexes = {}
-        self._full_redraw_on_next_update = True
-        self._to_redraw = set()
+        self.to_redraw = set()
         self.catch_child = None
 
     def get_num_unbound_buffers(self):
-        return len(self.nvim.buffers) - len(self._buf_num_to_text)
+        return len(self.nvim.buffers) - len(self.buf_num_to_text)
 
     def open_filename(self, pos, manual_scale, filename=None, buffer=None):
         if isinstance(pos, (tuple, list)):
@@ -35,7 +35,7 @@ class BufferHandler:
 
         if buffer is None and filename is not None:
             # no buffer provided, so open the one with the given filename
-            num_of_texts = len(self._buf_num_to_text)
+            num_of_texts = len(self.buf_num_to_text)
             if num_of_texts == 0:
                 self.nvim.command(f"edit {filename}")
             elif num_of_texts == len(self.nvim.buffers):
@@ -55,11 +55,11 @@ class BufferHandler:
         text = DraggableText(self.nvim, buffer, filename, self.view, pos, manual_scale)
         self.view.scene().addItem(text)
 
-        self._buf_num_to_text[buffer.number] = text
+        self.buf_num_to_text[buffer.number] = text
         return text
 
     def create_text(self, savedir, pos, manual_scale=Config.starting_box_scale):
-        num_of_texts = len(self._buf_num_to_text)
+        num_of_texts = len(self.buf_num_to_text)
         if num_of_texts == len(self.nvim.buffers) or num_of_texts == 0:
             self.last_file_nums[savedir] += 1
             filename = f"{savedir}/{self.last_file_nums[savedir]}.md"
@@ -71,7 +71,7 @@ class BufferHandler:
 
         # get the unused buffer
         for buf in self.nvim.buffers:
-            if buf.number not in self._buf_num_to_text:
+            if buf.number not in self.buf_num_to_text:
                 return self.open_filename(pos, manual_scale, filename, buf)
         raise RuntimeError("no unused buffer found")
 
@@ -100,7 +100,7 @@ class BufferHandler:
         self.nvim.command(f"tabnext {tab_num}")
 
     def delete_buf(self, buf):
-        text = self._buf_num_to_text.get(buf.number)
+        text = self.buf_num_to_text.get(buf.number)
 
         if text.filename is not None:
             # delete the file
@@ -108,7 +108,7 @@ class BufferHandler:
 
         self.nvim.command(f"bwipeout! {buf.number}")
         self.view.scene().removeItem(text)
-        self._buf_num_to_text.pop(buf.number)
+        self.buf_num_to_text.pop(buf.number)
 
         # detach
         text.detach_parent()
@@ -121,7 +121,7 @@ class BufferHandler:
         del text
 
     def get_texts(self):
-        yield from self._buf_num_to_text.values()
+        yield from self.buf_num_to_text.values()
 
     def get_root_texts(self):
         roots = set()
@@ -132,10 +132,10 @@ class BufferHandler:
         return roots
 
     def get_current_text(self):
-        return self._buf_num_to_text.get(self.nvim.current.buffer.number)
+        return self.buf_num_to_text.get(self.nvim.current.buffer.number)
 
     def create_child(self, side):
-        current_text = self._buf_num_to_text.get(self.nvim.current.buffer.number)
+        current_text = self.buf_num_to_text.get(self.nvim.current.buffer.number)
 
         if current_text.filename is None:
             # it's not a persistent buffer, so it shouldn't have children
@@ -169,7 +169,7 @@ class BufferHandler:
         old = self.jumplist.pop()
         self.forward_jumplist.append(old)
         self.jump_to_buffer(self.jumplist[-1])
-        self._to_redraw.add(old)
+        self.to_redraw.add(old)
         old_buf = self.nvim.buffers[old]
         if is_buf_empty(old_buf) or old_buf[:] == [Config.input_on_creation]:
             self.delete_buf(old_buf)
@@ -178,7 +178,7 @@ class BufferHandler:
         if len(self.forward_jumplist) == 0:
             return
         old = self.get_current_text().buffer.number
-        self._to_redraw.add(old)
+        self.to_redraw.add(old)
         new = self.forward_jumplist.pop()
         self.jumplist.append(new)
         self.jump_to_buffer(new)
@@ -227,7 +227,7 @@ class BufferHandler:
         if len(wins) != 1:
             bufs_in_tab = {self.nvim.api.win_get_buf(win): win for win in wins}
             unbound_bufs = [
-                buf for buf in bufs_in_tab if buf.number not in self._buf_num_to_text
+                buf for buf in bufs_in_tab if buf.number not in self.buf_num_to_text
             ]
             for unb_buf in unbound_bufs:
                 # delete its window
@@ -236,11 +236,49 @@ class BufferHandler:
             current_buffer = self.nvim.current.buffer
 
         # if hidden buffer focused, focus on the last chosen text
-        if current_buffer.number not in self._buf_num_to_text:
+        if current_buffer.number not in self.buf_num_to_text:
             self.jump_to_buffer(self.jumplist[-1])
             current_buffer = self.nvim.current.buffer
-        
+
         return current_buffer
+
+    def _batched_get_nvim_info(self, to_fetch: List[int]):
+        # get all relevalt data in a batched call
+        functions = [
+            ["nvim_eval", ["GetAllFolds()"]],
+            ["nvim_eval", ['getpos("v")']],
+            ["nvim_eval", ['getpos(".")']],
+            ["nvim_win_get_cursor", [0]],
+        ]
+        for buf_num in to_fetch:
+            functions.append(["nvim_buf_get_lines", [buf_num, 0, -1, False]])
+
+        for buf_num in to_fetch:
+            _args = [buf_num, -1, (0, 0), (-1, -1), {"details": True}]
+            functions.append(["nvim_buf_get_extmarks", _args])
+
+        # later also get highlight info of bookmarks
+
+        results, errors = self.nvim.api.call_atomic(functions)
+        assert errors is None, errors
+        results = deque(results)
+
+        cur_buf_info = dict(
+            folds=results.popleft(),
+            selection_start=results.popleft(),
+            selection_end=results.popleft(),
+            cursor_position=results.popleft(),
+        )
+
+        all_lines = dict()
+        for buf_num in to_fetch:
+            all_lines[buf_num] = results.popleft()
+
+        all_extmarks = dict()
+        for buf_num in to_fetch:
+            all_extmarks[buf_num] = results.popleft()
+
+        return cur_buf_info, all_lines, all_extmarks
 
     def update_all_texts(self):
         start = time.time()
@@ -252,22 +290,22 @@ class BufferHandler:
         self.view.dummy.setFocus()
 
         # (it's better to do this once and pass around, bc every nvim api query is ~3ms)
-        self._to_redraw.add(self.jumplist[-1])
+        self.to_redraw.add(self.jumplist[-1])
 
         # (note: sanitize_buffers can change the current buffer)
         current_buf = self._sanitize_buffers()
 
         # catch children
         if self.jumplist[-1] != current_buf.number and self.catch_child is not None:
-            parent_text = self._buf_num_to_text[self.jumplist[-1]]
-            child_text = self._buf_num_to_text[current_buf.number]
+            parent_text = self.buf_num_to_text[self.jumplist[-1]]
+            child_text = self.buf_num_to_text[current_buf.number]
             self.reattach_text(parent_text, child_text)
             self.catch_child = None
 
         # grow jumplist
         if (
             current_buf.number != self.jumplist[-1]
-            and current_buf.number in self._buf_num_to_text
+            and current_buf.number in self.buf_num_to_text
         ):
             self.jumplist.append(current_buf.number)
             self.forward_jumplist = []
@@ -275,52 +313,50 @@ class BufferHandler:
 
         ####################################################
         # redraw
+        # choose which ones to redraw
+        self.to_redraw.add(current_buf.number)
+        all_bufs = self.buf_num_to_text.keys()
+        to_redraw = self.to_redraw & set(all_bufs)
+        self.to_redraw = set()
+
         # note that in principle other buffers could have marks
         # but when it comes to leap marks, they are only present iff current buffer
         # has some too
         get_extmarks = [] != self.nvim.api.buf_get_extmarks(
             current_buf.number, -1, (0, 0), (-1, -1), {}
         )
-        
+        # potential simplification would be to always get info from all bufs
+        # but that may have overhead when there is some huge num of bufs?
 
-        # # get all relevalt data in a batched call
-        # wins, out, out2 = self.nvim.api.call_atomic([
-        #     ["nvim_buf_get_extmarks", [current_buf.number, -1, (0, 0), (-1, -1), {}]],
-        #     ["nvim_eval", ['GetAllFolds()']],
-        #     ["nvim_eval", ['getpos("v")']],
-        #     ["nvim_eval", ['getpos(".")']],
-        #     # also get lines for each redrawn buffer
-        #     # and if get_marks, get all marks
-        #     # later also get highlight info of bookmarks
-        # ])[0]
-
-
-        # choose which ones to redraw
-        if get_extmarks or self._full_redraw_on_next_update:
-            # redraw all
-            to_redraw = set(self._buf_num_to_text.keys())
-        else:
-            self._to_redraw.add(current_buf.number)
-            to_redraw = self._to_redraw & self._buf_num_to_text.keys()
-        self._to_redraw = set()
+        # get batched info from nvim about potentially changed buffers
+        cur_buf_info, all_lines, all_extmarks = self._batched_get_nvim_info(
+            all_bufs if get_extmarks else list(to_redraw)
+        )
+        for buf_num, extmarks in all_extmarks.items():
+            if extmarks != []:
+                to_redraw.add(buf_num)
 
         # initial redraw
         for buf_num in to_redraw:
-            text = self._buf_num_to_text[buf_num]
-            text.update_text(get_extmarks)
+            text = self.buf_num_to_text[buf_num]
+            lines = all_lines[buf_num]
+            extmarks = all_extmarks[buf_num]
+            text.update_text(lines, extmarks)
 
         # draw the things that current buffer has
-        current_text = self._buf_num_to_text[current_buf.number]
-        current_text.update_current_text(mode_info)
+        current_text = self.buf_num_to_text[current_buf.number]
+        current_text.update_current_text(mode_info, cur_buf_info)
 
         # hide folds
         for buf_num in to_redraw:
-            text = self._buf_num_to_text[buf_num]
+            text = self.buf_num_to_text[buf_num]
             text.hide_folds()
 
         # reposition all text boxes
         for text in self.get_root_texts():
             text.reposition()
 
-        self._full_redraw_on_next_update = get_extmarks
+        for buf_num, extmarks in all_extmarks.items():
+            if extmarks != []:
+                self.to_redraw.add(buf_num)
         print(time.time() - start)

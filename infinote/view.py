@@ -43,7 +43,7 @@ class GraphicView(QGraphicsView):
         screen_size = self.screen().size()
         self.status_bar = QStatusBar()
         # place it at the top and display
-        self.status_bar.setGeometry(0, 0, screen_size.width(), 20)
+        self.status_bar.setGeometry(0, 0, screen_size.width() + 20, 20)
         color = Config.background_color
         self.status_bar.setStyleSheet("QStatusBar{background-color: " + color + ";}")
         self._message = []

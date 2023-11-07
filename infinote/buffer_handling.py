@@ -295,8 +295,6 @@ class BufferHandler:
 
         # unfocus the text boxes - but better would be to always have focus
         self.view.dummy.setFocus()
-
-        # (it's better to do this once and pass around, bc every nvim api query is ~3ms)
         self.to_redraw.add(self.jumplist[-1])
 
         # (note: sanitize_buffers can change the current buffer)
@@ -318,6 +316,9 @@ class BufferHandler:
             self.forward_jumplist = []
             self.jumplist = self.jumplist[-30:]
 
+        self._redraw(mode_info, current_buf)
+
+    def _redraw(self, mode_info, current_buf):
         # choose which ones to redraw
         self.to_redraw.add(current_buf.number)
         all_bufs = self.buf_num_to_text.keys()
@@ -364,7 +365,7 @@ class BufferHandler:
         # draw cursor in current
         current_text.draw_cursor(mode_info, cur_buf_info)
 
-        # hide folds, set cursor
+        # set (invisible) cursor, hide folds
         for buf_num in to_redraw:
             text = self.buf_num_to_text[buf_num]
             # hide folds deletes lines so it needs to be at the end
@@ -377,6 +378,7 @@ class BufferHandler:
 
         ####################################################
 
+        # mark texts with extmarks to be redrawn on next call
         for buf_num, extmarks in all_extmarks.items():
             if extmarks != []:
                 self.to_redraw.add(buf_num)

@@ -3,14 +3,11 @@ from collections import defaultdict, deque
 from pathlib import Path
 from typing import List
 
+from colormath.color_conversions import convert_color
+from colormath.color_objects import HSLColor, LCHabColor
 from config import Config
 from PySide6.QtCore import QPointF
 from text_object import DraggableText, is_buf_empty
-
-# there are glitches when moving texts around
-# so redraw the background first
-# TODO this does not work
-# note: this happens only when maximized
 
 
 class BufferHandler:
@@ -19,15 +16,25 @@ class BufferHandler:
 
         self.view = view
         self.jumplist = None  # must be set by view
-        self.last_file_nums = defaultdict(lambda: 0)
         self.buf_num_to_text = {}
         self.forward_jumplist = []
-        self.savedir_indexes = {}
+        self.last_file_nums = defaultdict(lambda: 0)
+        self.savedir_hues = {}
         self.to_redraw = set()
         self.catch_child = None
 
     def get_num_unbound_buffers(self):
         return len(self.nvim.buffers) - len(self.buf_num_to_text)
+
+    def choose_hue_for_savedir(self, savedir):
+        # choose the hue in a perceptually uniform way
+        # choose a num between 60 and 310 degrees, to avoid non-persistent's red
+        uniform = (savedir.stem.__hash__() % 250) + 60
+        random_lch_color = LCHabColor(100, 128, uniform)
+        random_HSL_color = convert_color(random_lch_color, HSLColor)
+        hue = int(random_HSL_color.hsl_h)
+
+        self.savedir_hues[savedir] = hue
 
     def open_filename(self, pos, manual_scale, filename=None, buffer=None):
         if isinstance(pos, (tuple, list)):
@@ -311,8 +318,6 @@ class BufferHandler:
             self.forward_jumplist = []
             self.jumplist = self.jumplist[-30:]
 
-        ####################################################
-        # redraw
         # choose which ones to redraw
         self.to_redraw.add(current_buf.number)
         all_bufs = self.buf_num_to_text.keys()
@@ -336,6 +341,9 @@ class BufferHandler:
             if extmarks != []:
                 to_redraw.add(buf_num)
 
+        ####################################################
+        # redraw itself
+
         # initial redraw
         for buf_num in to_redraw:
             text = self.buf_num_to_text[buf_num]
@@ -348,17 +356,26 @@ class BufferHandler:
         lines = all_lines[current_buf.number]
         current_text.update_current_text(mode_info, cur_buf_info, lines)
 
-        # hide folds, set cursor and draw sign lines
+        # draw sign lines
         for buf_num in to_redraw:
             text = self.buf_num_to_text[buf_num]
             text.draw_sign_lines(all_lines[buf_num])
-            text.set_cursor_pos()
+
+        # draw cursor in current
+        current_text.draw_cursor(mode_info, cur_buf_info)
+
+        # hide folds, set cursor
+        for buf_num in to_redraw:
+            text = self.buf_num_to_text[buf_num]
             # hide folds deletes lines so it needs to be at the end
+            text.set_invisible_cursor_pos()
             text.hide_folds()
 
         # reposition all text boxes
         for text in self.get_root_texts():
             text.reposition()
+
+        ####################################################
 
         for buf_num, extmarks in all_extmarks.items():
             if extmarks != []:

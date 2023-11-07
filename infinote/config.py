@@ -2,7 +2,7 @@ import re
 
 from PySide6.QtGui import QColor, QFont
 
-_colors = ["hsl(184, 96%, {}%)", "hsl(64, 96%, {}%)", "hsl(136, 96%, {}%)"]
+# _colors = ["hsl(184, 96%, {}%)", "hsl(64, 96%, {}%)", "hsl(136, 96%, {}%)"]
 _color_non_persistent = "hsl(341, 96%, {}%)"
 
 colemak_keys = {
@@ -28,19 +28,6 @@ colemak_keys = {
 }
 
 
-def parse_color(color_style):
-    match = re.match("hsl\((\d+), (\d+)%, (\d+)%\)", color_style)
-    if match:
-        h = int(match[1])
-        s = int(int(match[2]) * 255 / 100)
-        l = int(int(match[3]) * 255 / 100)
-        color = QColor()
-        color.setHsl(h, s, l)
-    else:
-        color = QColor(color_style)
-    return color
-
-
 class Config:
     autoshrink = True
     text_width = 350
@@ -48,19 +35,6 @@ class Config:
     initial_position = (500, 40)
     text_gap = 6
     starting_box_scale = 0.6
-
-    # font sizes for each indent level
-    # font_sizes = [16] * 4 + [14] * 4 + [11] * 4
-    # font_sizes = [15] * 4 + [14] * 4 + [11] * 4
-    font_sizes = [14] * 4 + [11] * 4 + [8] * 4
-    # font_sizes = [11] * 4 + [8] * 4 + [6] * 4
-    # some font sizes cause indent problems:
-    # note that the problems also depent on the intended indent of that font
-    # the combinations above are one of the very few that work well, so it's
-    # recommended to just choose one of those
-    # good values for first indent lvl: 16, 15, 14, 11
-    # for the second indent level: 14, 11, 8, 6
-    # for the third indent level: 14, 11, 8, 6, 5
 
     # whether to change zoom level only on jumps to a neighbor text
     track_jumps_on_neighbor_moves = False
@@ -74,13 +48,11 @@ class Config:
 
     # https://blog.depositphotos.com/15-cyberpunk-color-palettes-for-dystopian-designs.html
     background_color = "#000000"
-    border_colors = [c.format(15) for c in _colors]
-    text_colors = [c.format(80) for c in _colors]
-    selection_colors = [c.format(23) for c in _colors]
-    non_persistent_dir_color = _color_non_persistent.format(28)
-    non_persistent_text_color = _color_non_persistent.format(80)
-    non_persistent_selection_color = _color_non_persistent.format(23)
-    sign_color = "hsl(289, 100%, 12%)"
+    border_brightness = "15%"
+    text_brightness = "80%"
+    selection_brightness = "23%"
+    non_persistent_hue = 341
+    sign_color = QColor.fromHsl(289, 100, 18)
 
     leader_key = ","
     # supported single key codes, and single key codes preceded with leader key
@@ -103,10 +75,21 @@ class Config:
 
     input_on_creation = "- "
 
+    # font sizes for each indent level
+    # font_sizes = [16] * 4 + [14] * 4 + [11] * 4
+    # font_sizes = [15] * 4 + [14] * 4 + [11] * 4
+    font_sizes = [14] * 4 + [11] * 4 + [8] * 4
+    # font_sizes = [11] * 4 + [8] * 4 + [6] * 4
+    # some font sizes cause indent problems:
+    # note that the problems also depent on the intended indent of that font
+    # the combinations above are one of the very few that work well, so it's
+    # recommended to just choose one of those
+    # good values for first indent lvl: 16, 15, 14, 11
+    # for the second indent level: 14, 11, 8, 6
+    # for the third indent level: 14, 11, 8, 6, 5
+
     ########################
     # don't tweak those - those are automatic calculations
     _initial_distance = (initial_position[0] ** 2 + initial_position[1] ** 2) ** 0.5
 
-    sign_color = parse_color(sign_color)
-    selection_colors = [parse_color(c) for c in selection_colors]
     fonts = [QFont("monospace", fs) for fs in font_sizes]

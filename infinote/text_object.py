@@ -1,7 +1,7 @@
 import time
 from pathlib import Path
 
-from config import Config, parse_color
+from config import Config
 from PySide6.QtCore import QPointF, Qt
 from PySide6.QtGui import (
     QColor,
@@ -79,33 +79,30 @@ class DraggableText(QGraphicsProxyWidget):
 
         if filename is None:
             # it's non-persistent buffer, so mark its border yellow
-            dir_color = Config.non_persistent_dir_color
-            text_color = Config.non_persistent_text_color
-            self.selection_color = Config.non_persistent_selection_color
+            hue = Config.non_persistent_hue
         else:
             savedir = Path(filename).parent
-            savedir_index = self.view.buf_handler.savedir_indexes[savedir]
-            savedir_index %= len(Config.border_colors)
-            dir_color = Config.border_colors[savedir_index]
-            text_color = Config.text_colors[savedir_index]
-            self.selection_color = Config.selection_colors[savedir_index]
+            hue = self.view.buf_handler.savedir_hues[savedir]
         style = f"""
             QTextEdit {{
                 background-color: {Config.background_color};
-                border: 1px solid {dir_color};
-                color: {text_color};
-                selection-background-color: {text_color};
+                border: 1px solid hsl({hue}, 96%, {Config.border_brightness});
+                color: hsl({hue}, 96%, {Config.text_brightness});
             }}
             QScrollBar:vertical {{
                 width: 15px;
                 background: {Config.background_color};
             }}
             QScrollBar::handle:vertical {{
-                background-color: {dir_color};
+                background-color: hsl({hue}, 96%, {Config.border_brightness});
             }}
         """
         self.text_box.setStyleSheet(style)
-        self.text_color = parse_color(text_color)
+
+        self.text_color = QColor()
+        self.text_color.setHsl(hue, 96, int(Config.text_brightness[:-1]))
+        self.selection_color = QColor()
+        self.selection_color.setHsl(hue, 96, int(Config.selection_brightness[:-1]))
 
         doc = self.text_box.document()
         doc.setIndentWidth(1)
@@ -340,6 +337,8 @@ class DraggableText(QGraphicsProxyWidget):
             for y in range(s[0], e[0] + 1):
                 self.highlight(self.selection_color, (y, x_start), (y, x_end))
 
+    def draw_cursor(self, mode_info, cur_buf_info):
+        mode = mode_info["mode"]
         # set cursor
         curs_y, curs_x = cur_buf_info["cursor_position"]
         pos = self._yx_to_pos(curs_y, curs_x)
@@ -391,7 +390,7 @@ class DraggableText(QGraphicsProxyWidget):
         else:
             self.sign_lines = []
 
-    def set_cursor_pos(self):
+    def set_invisible_cursor_pos(self):
         # to prevent weird line glitches, we need to set always the same cursor font
         # and have it as a normal caret, not selection
         cursor = self.text_box.textCursor()

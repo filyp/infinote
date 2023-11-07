@@ -90,11 +90,13 @@ if __name__ == "__main__":
     assert len(nvim.buffers) == 1, "we require nvim to start with one buffer"
 
     buf_handler = view.buf_handler
-    buf_handler.savedir_indexes = {savedir: i for i, savedir in enumerate(savedirs)}
+    # buf_handler.savedir_indexes = {savedir: i for i, savedir in enumerate(savedirs)}
 
     try:
         load_scene(view, savedirs)
     except AssertionError:
+        # set the color of first text
+        buf_handler.choose_hue_for_savedir(savedirs[0])
         # create one text
         text = buf_handler.create_text(savedirs[0], Config.initial_position)
         first_text_width = (

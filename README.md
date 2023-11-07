@@ -2,6 +2,12 @@
 
 *Feel the spatial freedom in your notes.*
 
+## Instalation
+
+```bash
+python3.11 -m venv venv --copies
+venv/bin/pip install PySide6 pynvim colormath
+```
 
 ## Troubleshooting
 

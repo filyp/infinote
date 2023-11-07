@@ -17,6 +17,8 @@ def load_scene(view: QGraphicsView, savedirs: List[Path]):
 
         if files == [] or not meta_path.exists():
             print(f"no markdown files in {savedir}")
+            # save some initial hue for this dir
+            view.buf_handler.choose_hue_for_savedir(savedir)
             continue
         loaded_any_folder = True
 
@@ -25,7 +27,10 @@ def load_scene(view: QGraphicsView, savedirs: List[Path]):
         meta = json.loads(meta_path.read_text())
         global_meta.update(meta)
 
-        # load them into buffers
+        # load dir colors
+        view.buf_handler.savedir_hues[savedir] = meta["hue"]
+
+        # load files into buffers
         for full_filename in files:
             # TODO this may fail if savedir is passed as absolute
             filename = full_filename.as_posix()
@@ -49,6 +54,7 @@ def load_scene(view: QGraphicsView, savedirs: List[Path]):
         text.parent = filename_to_text.get(info["parent"])
 
     assert loaded_any_folder, "no markdown files found in any folder"
+    print(view.buf_handler.savedir_hues)
 
 
 def save_scene(view: QGraphicsView, savedirs: List[Path]):
@@ -67,6 +73,10 @@ def save_scene(view: QGraphicsView, savedirs: List[Path]):
             child_right=text.child_right.filename if text.child_right else None,
             parent=text.parent.filename if text.parent else None,
         )
+
+    # record other data
+    for savedir, meta in metas.items():
+        meta["hue"] = view.buf_handler.savedir_hues[savedir]
 
     # save metadata jsons
     for savedir, meta in metas.items():

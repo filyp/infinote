@@ -54,7 +54,6 @@ def load_scene(view: QGraphicsView, savedirs: List[Path]):
         text.parent = filename_to_text.get(info["parent"])
 
     assert loaded_any_folder, "no markdown files found in any folder"
-    print(view.buf_handler.savedir_hues)
 
 
 def save_scene(view: QGraphicsView, savedirs: List[Path]):

@@ -29,7 +29,7 @@ class BufferHandler:
     def choose_hue_for_savedir(self, savedir):
         # choose the hue in a perceptually uniform way
         # choose a num between 60 and 310 degrees, to avoid non-persistent's red
-        uniform = (savedir.stem.__hash__() % 250) + 60
+        uniform = (savedir.stem.__hash__() % 250) + 60  # note: this hash is changing
         random_lch_color = LCHabColor(100, 128, uniform)
         random_HSL_color = convert_color(random_lch_color, HSLColor)
         hue = int(random_HSL_color.hsl_h)

@@ -23,6 +23,9 @@ from view import GraphicView
 
 # TODO
 # record some demo
+# bookmarks can just be changed by swapping the .vim-bookmarks file
+#    but this seems to require that nvim is inactive during swap, otherwise weird
+#    stuff happens
 # look into syncing with syncthing
 #  or using attach nvim with tcp
 #  everyone has their own folder
@@ -47,9 +50,8 @@ from view import GraphicView
 # highlight search
 # if stuff gets too heavy, move back to QTextBrowser, and just have some different color for insert cursor?
 #  for now, the bottleneck is communication with nvim
-# dragging take correction for rescaling, keep mouse pos fixed on text pos
 # solve those weird glitches when moving text around
-#  havent seen them lately though
+#  they happen only when maximized
 # unnamed buffers, created with piping something to vim, if they exist, they can fuck stuff up, binding gets incorrect
 # for >100 lines texts, I still may not be able to jump there
 #  https://github.com/ggandor/leap.nvim/issues/196
@@ -62,9 +64,11 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.view = view
         self.setCentralWidget(self.view)
-        # self.showMaximized()
-        # # not maximized, but 1000x1000
-        self.resize(1900, 600)
+
+        # self.resize(1900, 600)
+        # self.showMaximized()  # this has small glitches when dragging or zooming
+        self.showFullScreen()
+
         self.show()
 
 
@@ -96,7 +100,6 @@ if __name__ == "__main__":
         load_scene(view, savedirs)
     except AssertionError:
         # set the color of first text
-        buf_handler.choose_hue_for_savedir(savedirs[0])
         # create one text
         text = buf_handler.create_text(savedirs[0], Config.initial_position)
         first_text_width = (

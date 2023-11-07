@@ -43,32 +43,24 @@ def parse_color(color_style):
 
 class Config:
     autoshrink = True
-    text_width = 300
+    text_width = 350
     text_max_height = text_width * 1.618
     initial_position = (500, 40)
     text_gap = 6
-    starting_box_scale = 0.7
+    starting_box_scale = 0.6
+
     # font sizes for each indent level
-    # font_sizes = [11, 11, 11, 11, 8]
-    # font_sizes = [11, 11, 11, 11, 8, 8, 8, 8, 6]
-    # font_sizes = [11, 11, 11, 11, 7, 8, 8, 8, 8]
-    font_sizes = [12, 12, 12, 12, 10, 10, 10, 10, 8, 8, 8, 8]
-    # font_sizes = [11] #, 12, 12, 12, 10, 10, 10, 10, 8, 8, 8, 8]
-    # ! note: setting wrong font sizes can lead to weird pixel shifts and indent misalignment for some reason
-    # so be careful when changing the fonts
-    # seems that 6, 8, 11, 14, 15 work well
-    # bad?: 7!, 9, 10, 12, 13, 16
-    # even with the better ones, it flickers a bit
-    # the only way to stop it seems to be choosing just one font
-    # ! another possibility is that using QTextBrowser would help
-    #   nope, it does not
-    #   but changing fonts really seems to help
-    # it happens more when there are larger differences in font size
-    # even with those nicer fonts it happens
-    # my hypothesis is that it must depent on the order of cursor operations
-    #   so if I keep it somewhat constant, it the placement should be constant too?
-    #   but controlling that is impossible
-    # with 11,8 it's practically invisible
+    # font_sizes = [16] * 4 + [14] * 4 + [11] * 4
+    # font_sizes = [15] * 4 + [14] * 4 + [11] * 4
+    font_sizes = [14] * 4 + [11] * 4 + [8] * 4
+    # font_sizes = [11] * 4 + [8] * 4 + [6] * 4
+    # some font sizes cause indent problems:
+    # note that the problems also depent on the intended indent of that font
+    # the combinations above are one of the very few that work well, so it's
+    # recommended to just choose one of those
+    # good values for first indent lvl: 16, 15, 14, 11
+    # for the second indent level: 14, 11, 8, 6
+    # for the third indent level: 14, 11, 8, 6, 5
 
     # whether to change zoom level only on jumps to a neighbor text
     track_jumps_on_neighbor_moves = False

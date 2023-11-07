@@ -69,9 +69,18 @@ class MainWindow(QMainWindow):
 
 
 if __name__ == "__main__":
-    savedirs = [Path(pathname) for pathname in sys.argv[1:]]
+    savedirs = [Path(pathname).resolve() for pathname in sys.argv[1:]]
+
     for savedir in savedirs:
         savedir.mkdir(parents=True, exist_ok=True)
+    
+    # fisrt savedir is our main
+    os.chdir(savedirs[0])
+    # the rest should now be relative
+    # savedirs = [d.relative_to(Path.cwd()) for d in savedirs]
+    savedirs = [os.path.relpath(d, Path.cwd()) for d in savedirs]
+    savedirs = [Path(d) for d in savedirs]
+    
 
     nvim = pynvim.attach(
         "child", argv=["/usr/bin/env", "nvim", "--embed", "--headless"]

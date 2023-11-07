@@ -1,4 +1,5 @@
 import time
+import os
 from pathlib import Path
 
 from config import Config, parse_color
@@ -209,7 +210,8 @@ class DraggableText(QGraphicsProxyWidget):
         # take the actual filename from the buffer
         buf_filename = self.buffer.name
         # make it relative to Path.cwd()
-        buf_filename = Path(buf_filename).relative_to(Path.cwd()).as_posix()
+        # buf_filename = Path(buf_filename).relative_to(Path.cwd()).as_posix()
+        buf_filename = os.path.relpath(Path(buf_filename).resolve(), Path.cwd())
         # make sure the actual filename is the same as given one
         assert buf_filename == self.filename, (buf_filename, self.filename)
 

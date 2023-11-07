@@ -23,13 +23,16 @@ def load_scene(view: QGraphicsView, savedirs: List[Path]):
         # load all
 
         meta = json.loads(meta_path.read_text())
-        global_meta.update(meta)
+        # global_meta.update(meta)
+        for filename, info in meta.items():
+            filename = (savedir / filename).as_posix()
+            global_meta[filename] = info
 
         # load them into buffers
         for full_filename in files:
             # TODO this may fail if savedir is passed as absolute
             filename = full_filename.as_posix()
-            info = meta[filename]
+            info = global_meta[filename]
 
             # create text
             text = view.buf_handler.open_filename(

@@ -62,7 +62,7 @@ class BufferHandler:
         num_of_texts = len(self.buf_num_to_text)
         if num_of_texts == len(self.nvim.buffers) or num_of_texts == 0:
             self.last_file_nums[savedir] += 1
-            filename = f"{savedir}/{self.last_file_nums[savedir]}.md"
+            filename = (savedir / f"{self.last_file_nums[savedir]}.md").as_posix()
             return self.open_filename(pos, manual_scale, filename)
 
         # some buffer was created some other way than calling create_text,

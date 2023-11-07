@@ -348,10 +348,12 @@ class BufferHandler:
         lines = all_lines[current_buf.number]
         current_text.update_current_text(mode_info, cur_buf_info, lines)
 
-        # hide folds and draw sign lines
+        # hide folds, set cursor and draw sign lines
         for buf_num in to_redraw:
             text = self.buf_num_to_text[buf_num]
             text.draw_sign_lines(all_lines[buf_num])
+            text.set_cursor_pos()
+            # hide folds deletes lines so it needs to be at the end
             text.hide_folds()
 
         # reposition all text boxes

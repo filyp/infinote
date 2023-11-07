@@ -28,7 +28,7 @@ colemak_keys = {
 }
 
 
-def _parse_color(color_style):
+def parse_color(color_style):
     match = re.match("hsl\((\d+), (\d+)%, (\d+)%\)", color_style)
     if match:
         h = int(match[1])
@@ -49,7 +49,26 @@ class Config:
     text_gap = 6
     starting_box_scale = 0.7
     # font sizes for each indent level
+    # font_sizes = [11, 11, 11, 11, 8]
+    # font_sizes = [11, 11, 11, 11, 8, 8, 8, 8, 6]
+    # font_sizes = [11, 11, 11, 11, 7, 8, 8, 8, 8]
     font_sizes = [12, 12, 12, 12, 10, 10, 10, 10, 8, 8, 8, 8]
+    # font_sizes = [11] #, 12, 12, 12, 10, 10, 10, 10, 8, 8, 8, 8]
+    # ! note: setting wrong font sizes can lead to weird pixel shifts and indent misalignment for some reason
+    # so be careful when changing the fonts
+    # seems that 6, 8, 11, 14, 15 work well
+    # bad?: 7!, 9, 10, 12, 13, 16
+    # even with the better ones, it flickers a bit
+    # the only way to stop it seems to be choosing just one font
+    # ! another possibility is that using QTextBrowser would help
+    #   nope, it does not
+    #   but changing fonts really seems to help
+    # it happens more when there are larger differences in font size
+    # even with those nicer fonts it happens
+    # my hypothesis is that it must depent on the order of cursor operations
+    #   so if I keep it somewhat constant, it the placement should be constant too?
+    #   but controlling that is impossible
+    # with 11,8 it's practically invisible
 
     # whether to change zoom level only on jumps to a neighbor text
     track_jumps_on_neighbor_moves = False
@@ -96,6 +115,6 @@ class Config:
     # don't tweak those - those are automatic calculations
     _initial_distance = (initial_position[0] ** 2 + initial_position[1] ** 2) ** 0.5
 
-    sign_color = _parse_color(sign_color)
-    selection_colors = [_parse_color(c) for c in selection_colors]
+    sign_color = parse_color(sign_color)
+    selection_colors = [parse_color(c) for c in selection_colors]
     fonts = [QFont("monospace", fs) for fs in font_sizes]

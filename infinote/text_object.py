@@ -1,8 +1,8 @@
 import time
 from pathlib import Path
 
-from config import Config
-from PySide6.QtCore import QPointF
+from config import Config, parse_color
+from PySide6.QtCore import QPointF, Qt
 from PySide6.QtGui import (
     QColor,
     QFontMetrics,
@@ -10,7 +10,7 @@ from PySide6.QtGui import (
     QTextCharFormat,
     QTextCursor,
 )
-from PySide6.QtWidgets import QGraphicsProxyWidget, QTextEdit
+from PySide6.QtWidgets import QGraphicsProxyWidget, QTextBrowser, QTextEdit
 
 
 def is_buf_empty(buf):
@@ -22,6 +22,7 @@ def is_buf_empty(buf):
     return False
 
 
+# class NonSelectableTextEdit(QTextBrowser):
 class NonSelectableTextEdit(QTextEdit):
     def mousePressEvent(self, event):
         # Skip the mouse press event to prevent it from being handled by QTextBrowser
@@ -59,6 +60,7 @@ class DraggableText(QGraphicsProxyWidget):
         self.folds = []
         self.sign_lines = []
         self._height = 0
+        self.cursor_pos = 0
 
         self.text_box = NonSelectableTextEdit()
         self.text_box.setFixedWidth(Config.text_width)
@@ -102,8 +104,8 @@ class DraggableText(QGraphicsProxyWidget):
                 background-color: {dir_color};
             }}
         """
-        # box-shadow: 0px 0px 5px 0px {dir_color};
         self.text_box.setStyleSheet(style)
+        self.text_color = parse_color(text_color)
 
         doc = self.text_box.document()
         doc.setIndentWidth(1)
@@ -216,11 +218,13 @@ class DraggableText(QGraphicsProxyWidget):
         # save it
         nvim.command("w")
 
-    def highlight(self, color, start, end):
+    def highlight(self, color, start, end, invert=False):
         if not isinstance(color, QColor):
             color = QColor(color)
         color_format = QTextCharFormat()
         color_format.setBackground(color)
+        if invert:
+            color_format.setForeground(QColor(Config.background_color))
 
         start_pos = self._yx_to_pos(start[0], start[1] - 1)
         end_pos = self._yx_to_pos(end[0], end[1])
@@ -264,8 +268,6 @@ class DraggableText(QGraphicsProxyWidget):
             block_format.setIndent(indent_width)
             block_format.setTextIndent(-indent_width)
             cursor.setBlockFormat(block_format)
-
-            self.text_box.setTextCursor(cursor)
 
     def update_text(self, lines, extmarks):
         # maybeTODO optimization:
@@ -341,18 +343,13 @@ class DraggableText(QGraphicsProxyWidget):
         # set cursor
         curs_y, curs_x = cur_buf_info["cursor_position"]
         pos = self._yx_to_pos(curs_y, curs_x)
-        cursor = self.text_box.textCursor()
         if mode == "n":
-            cursor.setPosition(pos, QTextCursor.MoveAnchor)
-            cursor.setPosition(pos + 1, QTextCursor.KeepAnchor)
+            _yx_pos = (curs_y, curs_x + 1)
+            self.highlight(self.text_color, _yx_pos, _yx_pos, invert=True)
         elif mode == "i":
             # get focus so that cursor is displayed
             self.text_box.setFocus()
-            cursor.setPosition(pos)
-        else:
-            # set the cursor pos anyway, so that in visual widget scrolls to it
-            cursor.setPosition(pos)
-        self.text_box.setTextCursor(cursor)
+        self.cursor_pos = pos
 
     def hide_folds(self):
         # set folds
@@ -393,3 +390,14 @@ class DraggableText(QGraphicsProxyWidget):
             self.sign_lines = [sign["lnum"] for sign in signs]
         else:
             self.sign_lines = []
+
+    def set_cursor_pos(self):
+        # to prevent weird line glitches, we need to set always the same cursor font
+        # and have it as a normal caret, not selection
+        cursor = self.text_box.textCursor()
+        cursor.setPosition(self.cursor_pos)
+        font = Config.fonts[0]
+        font_format = QTextCharFormat()
+        font_format.setFont(font)
+        cursor.setCharFormat(font_format)
+        self.text_box.setTextCursor(cursor)

@@ -23,9 +23,6 @@ class GraphicView(QGraphicsView):
         self.savedirs = savedirs
         self.setRenderHint(QPainter.Antialiasing)
         self.setBackgroundBrush(QColor(Config.background_color))
-        self.setInteractive(True)
-        self.setDragMode(QGraphicsView.RubberBandDrag)
-        self.setMouseTracking(True)
         self.setScene(QGraphicsScene())
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)

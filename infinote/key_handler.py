@@ -155,10 +155,13 @@ class KeyHandler:
                     '<Home>"fyt|f|<Right>"lyiw:buffer<Space><C-r>f<Enter>:<C-r>l<Enter>'
                 )
                 self.nvim.input(cmd)
+                view.zoom_on_text(buf_handler.get_current_text())
             case "center on current text":
-                view.global_scale = view.get_scale_centered_on_current_text()
+                current_text = buf_handler.get_current_text()
+                view.global_scale = view.get_scale_centered_on_text(current_text)
             case "maximize on current text":
-                view.global_scale = view.get_scale_maximized_on_current_text()
+                current_text = buf_handler.get_current_text()
+                view.global_scale = view.get_scale_maximized_on_text(current_text)
             case "create child down":
                 buf_handler.create_child("down")
             case "create child right":
@@ -193,8 +196,10 @@ class KeyHandler:
                     view.timer.start(1000 / Config.FPS)
             case "jump back":
                 buf_handler.jump_back()
+                view.zoom_on_text(buf_handler.get_current_text())
             case "jump forward":
                 buf_handler.jump_forward()
+                view.zoom_on_text(buf_handler.get_current_text())
             case "catch child down":
                 buf_handler.catch_child = "down"
                 view.msg("catching child down")

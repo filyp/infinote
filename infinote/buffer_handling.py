@@ -165,9 +165,12 @@ class BufferHandler:
             raise ValueError("side must be 'right' or 'down'")
 
         child.parent = current_text
+        child.parent.reposition()
 
         if Config.track_jumps_on_neighbor_moves:
             self.view.track_jump(current_text, child)
+
+        self.view.zoom_on_text(child)
 
     def jump_back(self):
         if len(self.jumplist) <= 2:

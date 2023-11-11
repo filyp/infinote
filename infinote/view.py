@@ -147,15 +147,10 @@ class GraphicView(QGraphicsView):
         if Config.track_jumps_on_neighbor_moves:
             self.track_jump(current_text, new)
 
-        # keep the text in view
-        smallest_scale = self.get_scale_centered_on_current_text()
-        biggest_scale = self.get_scale_maximized_on_current_text()
-        self.global_scale = min(biggest_scale, self.global_scale)
-        self.global_scale = max(smallest_scale, self.global_scale)
+        self.zoom_on_text(new)
 
     def track_jump(self, old, new):
         # update global scale to track the movement
-
         old_pos = old.plane_pos
         old_dist = (old_pos.x() ** 2 + old_pos.y() ** 2) ** 0.5
         new_pos = new.plane_pos
@@ -163,8 +158,14 @@ class GraphicView(QGraphicsView):
 
         self.global_scale *= old_dist / new_dist
 
-    def get_scale_centered_on_current_text(self):
-        text = self.buf_handler.get_current_text()
+    def zoom_on_text(self, text):
+        # keep the text in view
+        smallest_scale = self.get_scale_centered_on_text(text)
+        biggest_scale = self.get_scale_maximized_on_text(text)
+        self.global_scale = min(biggest_scale, self.global_scale)
+        self.global_scale = max(smallest_scale, self.global_scale)
+
+    def get_scale_centered_on_text(self, text):
         x = text.plane_pos.x()
         y = text.plane_pos.y()
         window_width = self.screen().size().width()
@@ -175,8 +176,7 @@ class GraphicView(QGraphicsView):
 
         return min(center_scale_x, center_scale_y)
 
-    def get_scale_maximized_on_current_text(self):
-        text = self.buf_handler.get_current_text()
+    def get_scale_maximized_on_text(self, text):
         x = text.plane_pos.x()
         y = text.plane_pos.y()
         window_width = self.screen().size().width()

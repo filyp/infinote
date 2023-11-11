@@ -2,8 +2,10 @@ venv
 junk
 .vscode
 __pycache__
+.vim-bookmarks
+infinote.py.lprof
+
 t
 f
 a
-.vim-bookmarks
-infinote.py.lprof
+real

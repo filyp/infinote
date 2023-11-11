@@ -196,6 +196,10 @@ class DraggableText(QGraphicsProxyWidget):
         # this needs to be called only after this node's reposition
         return self.get_plane_scale() * self._height
 
+    def get_center(self):
+        # note: it's in screen coords, not plane coords
+        return self.mapToScene(self.rect().center())
+
     # text related functions:
 
     def save(self, nvim):

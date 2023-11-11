@@ -55,6 +55,12 @@ from view import GraphicView
 # unnamed buffers, created with piping something to vim, if they exist, they can fuck stuff up, binding gets incorrect
 # for >100 lines texts, I still may not be able to jump there
 #  https://github.com/ggandor/leap.nvim/issues/196
+# potential redraw speed bottleneck are folds?
+#     because deleting lines takes ~6ms each
+#     instead, we could calculate in advance and only draw those necessary
+#     but that complicates calculations of position - they need to be custom
+#     so only do it if it feels slow, and double checked in profiler it really is folds
+#   update: actually this may be false - folding is instant even for large folds
 #
 # note: custom C-o and C-i only jump between buffers, but not to correct lines
 
@@ -105,7 +111,7 @@ if __name__ == "__main__":
         first_text_width = (
             Config.text_width * text.get_plane_scale() * view.global_scale
         )
-    view.zoom_on_current_text()
+    view.global_scale = view.get_scale_centered_on_current_text()
     buf_handler.to_redraw.update(buf_handler.buf_num_to_text.keys())
 
     buf_handler.jumplist = [None, nvim.current.buffer.number]

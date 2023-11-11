@@ -36,15 +36,20 @@ class Config:
     text_gap = 6
     starting_box_scale = 0.6
 
-    # whether to change zoom level only on jumps to a neighbor text
-    track_jumps_on_neighbor_moves = False
-
     # closer to 1 is slower (must be larger than 1)
     scroll_speed = 1.0005
     # invert scroll direction
-    scroll_invert = True
+    scroll_invert = False
     # speed of zooming left/right with keys (must be larger than 1)
     key_zoom_speed = 3
+    # whether to allow resizing text boxes with mouse wheel
+    scroll_can_resize_text = False
+    # when jumping to neighbor, if no text is connected in chosen direction,
+    # jump to closest disconnected text in that direction
+    allow_disconnected_jumps = True
+
+    # whether to change zoom level on jumps to a neighbor text
+    track_jumps_on_neighbor_moves = False
 
     # https://blog.depositphotos.com/15-cyberpunk-color-palettes-for-dystopian-designs.html
     background_color = "#000000"
@@ -52,7 +57,7 @@ class Config:
     text_brightness = "80%"
     selection_brightness = "23%"
     non_persistent_hue = 341
-    sign_color = QColor.fromHsl(289, 100, 18)
+    sign_color = QColor.fromHsl(289, 100, 28)
 
     leader_key = ","
     # supported single key codes, and single key codes preceded with leader key
@@ -62,8 +67,10 @@ class Config:
         ",h": "hop",
         # when in bookmarks window, jump to location of bookmark under cursor
         ",b": "bookmark jump",
-        # zoom on the current text box
-        ",z": "zoom on current text",
+        # center view on the current text box
+        ",c": "center on current text",
+        # zoom in as much as possible, while keeping the current text box in view
+        ",m": "maximize on current text",
         # custom C-o and C-i, because normal ones create unwanted buffers
         "<C-o>": "jump back",
         "<C-i>": "jump forward",
@@ -87,6 +94,9 @@ class Config:
     # good values for first indent lvl: 16, 15, 14, 11
     # for the second indent level: 14, 11, 8, 6
     # for the third indent level: 14, 11, 8, 6, 5
+
+    # when centering or maximizing on a text, this defines min gap left to win border
+    min_gap_win_edge = 0.02
 
     ########################
     # don't tweak those - those are automatic calculations

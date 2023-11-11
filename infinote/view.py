@@ -102,7 +102,7 @@ class GraphicView(QGraphicsView):
         zoom_factor = Config.scroll_speed ** (event.angleDelta().y() * direction)
 
         item = self.scene().itemAt(event.position(), self.transform())
-        if isinstance(item, DraggableText):
+        if isinstance(item, DraggableText) and Config.scroll_can_resize_text:
             # zoom it
             item.manual_scale *= zoom_factor
             item.reposition()
@@ -124,8 +124,20 @@ class GraphicView(QGraphicsView):
                 new = current_text.child_down
             case "right":
                 new = current_text.child_right
-            case "up" | "left":
+            case "up":
                 new = current_text.parent
+                if new is not None and new.child_down != current_text:
+                    # new is not our up parent
+                    new = None
+            case "left":
+                new = current_text.parent
+                if new is not None and new.child_right != current_text:
+                    # new is not our left parent
+                    new = None
+
+        if new is None and Config.allow_disconnected_jumps:
+            new = self._get_closest_text(current_text, direction)
+
         if new is None:
             return
 
@@ -134,6 +146,12 @@ class GraphicView(QGraphicsView):
 
         if Config.track_jumps_on_neighbor_moves:
             self.track_jump(current_text, new)
+
+        # keep the text in view
+        smallest_scale = self.get_scale_centered_on_current_text()
+        biggest_scale = self.get_scale_maximized_on_current_text()
+        self.global_scale = min(biggest_scale, self.global_scale)
+        self.global_scale = max(smallest_scale, self.global_scale)
 
     def track_jump(self, old, new):
         # update global scale to track the movement
@@ -145,18 +163,31 @@ class GraphicView(QGraphicsView):
 
         self.global_scale *= old_dist / new_dist
 
-    def zoom_on_current_text(self):
+    def get_scale_centered_on_current_text(self):
         text = self.buf_handler.get_current_text()
         x = text.plane_pos.x()
         y = text.plane_pos.y()
-
         window_width = self.screen().size().width()
-        center_scale = window_width / (x * 2 + text.get_plane_width())
-
         window_height = self.screen().size().height()
-        height_scale = window_height / (y + text.get_plane_height()) * 0.9
 
-        self.global_scale = min(center_scale, height_scale)
+        center_scale_x = window_width / (x * 2 + text.get_plane_width())
+        center_scale_y = window_height / (y * 2 + text.get_plane_height())
+
+        return min(center_scale_x, center_scale_y)
+
+    def get_scale_maximized_on_current_text(self):
+        text = self.buf_handler.get_current_text()
+        x = text.plane_pos.x()
+        y = text.plane_pos.y()
+        window_width = self.screen().size().width()
+        window_height = self.screen().size().height()
+
+        width_scale = window_width / (x + text.get_plane_width())
+        width_scale *= 1 - Config.min_gap_win_edge * 9 / 16
+        height_scale = window_height / (y + text.get_plane_height())
+        height_scale *= 1 - Config.min_gap_win_edge
+
+        return min(width_scale, height_scale)
 
     def keyReleaseEvent(self, event):
         if event.isAutoRepeat():
@@ -195,3 +226,28 @@ class GraphicView(QGraphicsView):
         text = self.buf_handler.get_current_text()
         text.manual_scale *= Config.key_zoom_speed ** (time_diff * sign)
         text.reposition()
+
+    def _get_closest_text(self, current_text, direction):
+        current_center = current_text.get_center()
+
+        # get all texts in that direction
+        candidate_text_distances = dict()
+        for text in self.buf_handler.get_texts():
+            if text == current_text:
+                continue
+            diff = text.get_center() - current_center
+            x, y = diff.x(), diff.y()
+
+            if (
+                (direction == "down" and y >= abs(x))
+                or (direction == "right" and x >= abs(y))
+                or (direction == "up" and y <= -abs(x))
+                or (direction == "left" and x <= -abs(y))
+            ):
+                candidate_text_distances[text] = (x**2 + y**2) ** 0.5
+
+        if len(candidate_text_distances) == 0:
+            return None
+
+        # get the closest one
+        return min(candidate_text_distances.keys(), key=candidate_text_distances.get)

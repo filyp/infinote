@@ -111,7 +111,7 @@ if __name__ == "__main__":
         first_text_width = (
             Config.text_width * text.get_plane_scale() * view.global_scale
         )
-    view.global_scale = view.get_scale_centered_on_current_text()
+    view.global_scale = view.get_scale_centered_on_text(buf_handler.get_current_text())
     buf_handler.to_redraw.update(buf_handler.buf_num_to_text.keys())
 
     buf_handler.jumplist = [None, nvim.current.buffer.number]

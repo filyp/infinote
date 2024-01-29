@@ -38,11 +38,11 @@ Here `~/cloud/notes` is your notes dir, `astrophysics` is the workspace name, an
 - `<A-i>` - shrink box
 - `<C-o>` - jump back
 - `<C-i>` - jump forward
-- ,c - center the view on current box
-- ,m - maximize the view on current box (zoom out as much as possible, while keeping the current box in view)
-- ,b - when in bookmarks window, jump to location of bookmark under cursor
+- `,c` - center the view on current box
+- `,m` - maximize the view on current box (zoom out as much as possible, while keeping the current box in view)
+- `,b` - when in bookmarks window, jump to location of bookmark under cursor
     - requires 'MattesGroeger/vim-bookmarks' installed
-- ,h - hop to any text using leap plugin
+- `,h` - hop to any text using leap plugin
     - requires 'ggandor/leap.nvim' installed
 
 ## Troubleshooting

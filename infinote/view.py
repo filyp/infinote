@@ -17,10 +17,9 @@ from infinote.text_object import DraggableText
 
 
 class GraphicView(QGraphicsView):
-    def __init__(self, nvim, savedirs, parent=None):
+    def __init__(self, nvim, main_subdir, parent=None):
         super().__init__(parent)
         self.nvim = nvim
-        self.savedirs = savedirs
         self.setRenderHint(QPainter.Antialiasing)
         self.setBackgroundBrush(QColor(Config.background_color))
         self.setScene(QGraphicsScene())
@@ -29,7 +28,7 @@ class GraphicView(QGraphicsView):
         self.global_scale = 1.0
         self.key_handler = KeyHandler(nvim, self)
         self.buf_handler = BufferHandler(nvim, self)
-        self.current_folder = savedirs[0]
+        self.current_folder = main_subdir
         self.timer = None
         self._timer_last_update = None
 

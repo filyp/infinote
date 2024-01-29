@@ -2,8 +2,6 @@ from collections import defaultdict, deque
 from pathlib import Path
 from typing import List
 
-from colormath.color_conversions import convert_color
-from colormath.color_objects import HSLColor, LCHabColor
 from PySide6.QtCore import QPointF
 
 from infinote.config import Config
@@ -26,15 +24,6 @@ class BufferHandler:
     def get_num_unbound_buffers(self):
         return len(self.nvim.buffers) - len(self.buf_num_to_text)
 
-    def choose_hue_for_savedir(self, savedir):
-        # choose the hue in a perceptually uniform way
-        # choose a num between 60 and 310 degrees, to avoid non-persistent's red
-        uniform = (savedir.stem.__hash__() % 250) + 60  # note: this hash is changing
-        random_lch_color = LCHabColor(100, 128, uniform)
-        random_HSL_color = convert_color(random_lch_color, HSLColor)
-        hue = int(random_HSL_color.hsl_h)
-
-        self.savedir_hues[savedir] = hue
 
     def open_filename(self, pos, manual_scale, filename=None, buffer=None):
         if isinstance(pos, (tuple, list)):

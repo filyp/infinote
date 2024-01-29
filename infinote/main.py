@@ -4,7 +4,6 @@ from pathlib import Path
 import pynvim
 from PySide6.QtWidgets import QApplication, QMainWindow
 
-from infinote.config import Config
 from infinote.persistence import load_scene, save_scene
 from infinote.view import GraphicView
 
@@ -23,9 +22,8 @@ class MainWindow(QMainWindow):
 
 
 def main():
-    savedirs = [Path(pathname) for pathname in sys.argv[1:]]
-    for savedir in savedirs:
-        savedir.mkdir(parents=True, exist_ok=True)
+    assert len(sys.argv) == 2, "usage: infinote <savedir>"
+    main_subdir = Path(sys.argv[1])
 
     nvim = pynvim.attach(
         "child", argv=["/usr/bin/env", "nvim", "--embed", "--headless"]
@@ -35,7 +33,8 @@ def main():
     # nvim = pynvim.attach('socket', path='/tmp/nvim')  # there's no speedup to this
 
     app = QApplication(sys.argv)
-    view = GraphicView(nvim, savedirs)
+    view = GraphicView(nvim, main_subdir)
+    buf_handler = view.buf_handler
     w = MainWindow(view)
 
     # make the cursor non-blinking
@@ -43,18 +42,7 @@ def main():
 
     assert len(nvim.buffers) == 1, "we require nvim to start with one buffer"
 
-    buf_handler = view.buf_handler
-    # buf_handler.savedir_indexes = {savedir: i for i, savedir in enumerate(savedirs)}
-
-    try:
-        load_scene(view, savedirs)
-    except AssertionError:
-        # set the color of first text
-        # create one text
-        text = buf_handler.create_text(savedirs[0], Config.initial_position)
-        first_text_width = (
-            Config.text_width * text.get_plane_scale() * view.global_scale
-        )
+    load_scene(buf_handler, main_subdir)
     view.global_scale = view.get_scale_centered_on_text(buf_handler.get_current_text())
     buf_handler.to_redraw.update(buf_handler.buf_num_to_text.keys())
 
@@ -62,7 +50,7 @@ def main():
     buf_handler.update_all_texts()
 
     exit_code = app.exec()
-    save_scene(view, savedirs)
+    save_scene(buf_handler, nvim, main_subdir)
     sys.exit(exit_code)
 
 

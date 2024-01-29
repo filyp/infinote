@@ -4,3 +4,5 @@ junk
 __pycache__
 infinote.py.lprof
 notes
+infinote_md.egg-info
+dist

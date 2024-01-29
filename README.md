@@ -5,7 +5,7 @@
 ## Instalation
 
 ```bash
-pipx install infinote
+pipx install infinote-md
 ```
 
 ## Troubleshooting

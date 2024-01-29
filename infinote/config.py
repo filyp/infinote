@@ -2,29 +2,48 @@ import re
 
 from PySide6.QtGui import QColor, QFont
 
-# _colors = ["hsl(184, 96%, {}%)", "hsl(64, 96%, {}%)", "hsl(136, 96%, {}%)"]
-_color_non_persistent = "hsl(341, 96%, {}%)"
 
+qwerty_keys = {
+    # move to neighbors
+    "<A-j>": "move down",
+    "<A-k>": "move up",
+    "<A-h>": "move left",
+    "<A-l>": "move right",
+    # create a child of the current text box, down of it
+    "<A-S-j>": "create child down",
+    # create a child of the current text box, right of it
+    "<A-S-l>": "create child right",
+    # catch a child and insert it down
+    "<A-C-j>": "catch child down",
+    # catch a child and insert it right
+    "<A-C-l>": "catch child right",
+    # zooming
+    "<A-y>": "zoom down",
+    "<A-o>": "zoom up",
+    # resizing box
+    "<A-u>": "grow box",
+    "<A-i>": "shrink box",
+}
 colemak_keys = {
     # move to neighbors
-    "<A-S-n>": "move down",
-    "<A-S-e>": "move up",
-    "<A-S-m>": "move left",
-    "<A-S-i>": "move right",
+    "<A-n>": "move down",
+    "<A-e>": "move up",
+    "<A-m>": "move left",
+    "<A-i>": "move right",
     # create a child of the current text box, down of it
-    "<A-n>": "create child down",
+    "<A-S-n>": "create child down",
     # create a child of the current text box, right of it
-    "<A-i>": "create child right",
+    "<A-S-i>": "create child right",
     # catch a child and insert it down
     "<A-C-n>": "catch child down",
     # catch a child and insert it right
     "<A-C-i>": "catch child right",
     # zooming
-    "<C-j>": "zoom down",
-    "<C-y>": "zoom up",
+    "<A-j>": "zoom down",
+    "<A-y>": "zoom up",
     # resizing box
-    "<C-l>": "grow box",
-    "<C-u>": "shrink box",
+    "<A-l>": "grow box",
+    "<A-u>": "shrink box",
 }
 
 
@@ -75,7 +94,7 @@ class Config:
         "<C-o>": "jump back",
         "<C-i>": "jump forward",
     }
-    keys.update(colemak_keys)
+    keys.update(qwerty_keys)
 
     # relevant for zooming and resizing with keys
     FPS = 180

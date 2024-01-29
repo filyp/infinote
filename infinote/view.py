@@ -1,8 +1,5 @@
 import time
 
-from buffer_handling import BufferHandler
-from config import Config
-from key_handler import KeyHandler
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPainter
 from PySide6.QtWidgets import (
@@ -11,9 +8,12 @@ from PySide6.QtWidgets import (
     QGraphicsScene,
     QGraphicsView,
     QStatusBar,
-    QTextBrowser,
 )
-from text_object import DraggableText
+
+from infinote.buffer_handling import BufferHandler
+from infinote.config import Config
+from infinote.key_handler import KeyHandler
+from infinote.text_object import DraggableText
 
 
 class GraphicView(QGraphicsView):

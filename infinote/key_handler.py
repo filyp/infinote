@@ -1,7 +1,6 @@
-import time
-
-from config import Config
 from PySide6.QtCore import Qt, QTimer
+
+from infinote.config import Config
 
 
 def parse_key_event_into_text(event):

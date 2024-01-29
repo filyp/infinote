@@ -1,7 +1,5 @@
-import time
 from pathlib import Path
 
-from config import Config
 from PySide6.QtCore import QPointF, Qt
 from PySide6.QtGui import (
     QColor,
@@ -11,6 +9,8 @@ from PySide6.QtGui import (
     QTextCursor,
 )
 from PySide6.QtWidgets import QGraphicsProxyWidget, QTextBrowser, QTextEdit
+
+from infinote.config import Config
 
 
 def is_buf_empty(buf):

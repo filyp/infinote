@@ -1,13 +1,13 @@
-import time
 from collections import defaultdict, deque
 from pathlib import Path
 from typing import List
 
 from colormath.color_conversions import convert_color
 from colormath.color_objects import HSLColor, LCHabColor
-from config import Config
 from PySide6.QtCore import QPointF
-from text_object import DraggableText, is_buf_empty
+
+from infinote.config import Config
+from infinote.text_object import DraggableText, is_buf_empty
 
 
 class BufferHandler:

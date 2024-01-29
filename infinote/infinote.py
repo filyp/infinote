@@ -1,13 +1,12 @@
-import json
-import os
 import sys
 from pathlib import Path
 
 import pynvim
-from config import Config
-from persistence import load_scene, save_scene
 from PySide6.QtWidgets import QApplication, QMainWindow
-from view import GraphicView
+
+from infinote.config import Config
+from infinote.persistence import load_scene, save_scene
+from infinote.view import GraphicView
 
 
 class MainWindow(QMainWindow):

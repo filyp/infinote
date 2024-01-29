@@ -5,8 +5,7 @@
 ## Instalation
 
 ```bash
-python3.11 -m venv venv --copies
-venv/bin/pip install PySide6 pynvim colormath
+pipx install infinote
 ```
 
 ## Troubleshooting

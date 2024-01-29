@@ -30,7 +30,7 @@ colemak_keys = {
 
 class Config:
     autoshrink = True
-    text_width = 350
+    text_width = 550
     text_max_height = text_width * 1.618
     initial_position = (500, 40)
     text_gap = 6

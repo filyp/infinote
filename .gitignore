@@ -2,6 +2,5 @@ venv
 junk
 .vscode
 __pycache__
-.vim-bookmarks
 infinote.py.lprof
 notes

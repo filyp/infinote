@@ -1,0 +1,63 @@
+TODO
+better running and creation, simpler
+handle blocked .mode() call somehow, timeout? but how to replicate now to test?
+
+record some demo
+bookmarks can just be changed by swapping the .vim-bookmarks file
+   but this seems to require that nvim is inactive during swap, otherwise weird
+   stuff happens
+   or, the bookmarks could be tmp, and at the end I parse them, and generally have
+       a custom way of dealing with them?, nah, complicates things
+       !! source of truth and storage for bookmarks is my own storage, and I keep the
+       bookmark list in bookmarks.json
+       and then I pass them to vim bookmarks, and they handle them
+       so I tap into mm and mi commands
+       at the end, I use the command that deletes all the bookmarks?
+       that's the most freeing solution
+       but also less standard
+   !! maybe that's the best way to enforce bookmarks for separate folders?
+       always copy from/to the first passed dir
+       but then, could I merge bookmarks with someone?
+look into syncing with syncthing
+ or using attach nvim with tcp
+ everyone has their own folder
+ :set nomodifiable  -  prevent even editing the buffer
+for more granular control of bookmarks, each group would need to be a separate folder?
+ but also separate nvim session, and I don't want that
+ ? but maybe this option could be set https://github.com/MattesGroeger/vim-bookmarks#bookmarks-per-buffer
+some handling of dir creation and running and current dir cycling?
+    if we pass some folders, program should just handle going to the folder's parent there
+    assert that all pased dirs are in one parent dir
+
+mid:
+? (have bookmarks per layer folder)
+if I even want to optimize, I shouldn't draw all the texts on each keypress
+ instead draw onl the changed, and redraw the rest is s was pressed
+save web of transitions with timestamps
+make ** text bold
+box shadows
+ https://stackoverflow.com/questions/13962228/how-do-i-add-a-box-shadow-to-an-element-in-qt
+ https://github.com/GvozdevLeonid/BoxShadow-in-PyQt-PySide
+
+
+
+low:
+polish chars seem to break stuff, because they throuw position out of range,
+    they are probably more chars than one
+highlight search
+if stuff gets too heavy, move back to QTextBrowser, and just have some different color for insert cursor?
+ for now, the bottleneck is communication with nvim
+solve those weird glitches when moving text around
+ they happen only when maximized
+unnamed buffers, created with piping something to vim, if they exist, they can fuck stuff up, binding gets incorrect
+for >100 lines texts, I still may not be able to jump there
+ https://github.com/ggandor/leap.nvim/issues/196
+potential redraw speed bottleneck are folds?
+    because deleting lines takes ~6ms each
+    instead, we could calculate in advance and only draw those necessary
+    but that complicates calculations of position - they need to be custom
+    so only do it if it feels slow, and double checked in profiler it really is folds
+  update: actually this may be false - folding is instant even for large folds
+
+note: custom C-o and C-i only jump between buffers, but not to correct lines
+

@@ -31,7 +31,6 @@ def main():
     
     workspace_dir.mkdir(parents=True, exist_ok=True)
     os.chdir(workspace_dir)
-    print(workspace_dir)
 
     nvim = pynvim.attach(
         "child", argv=["/usr/bin/env", "nvim", "--embed", "--headless"]

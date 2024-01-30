@@ -62,6 +62,11 @@ def load_scene(buf_handler: BufferHandler, group_dir: Path):
             assert rel_filename in meta, f"alien file: {rel_filename}"
             info = meta[rel_filename]
 
+            if meta.get("active_text") and rel_filename == meta["active_text"]:
+                last_info = info
+                last_filename = full_filename
+                continue
+
             # create text
             text = buf_handler.open_filename(
                 info["plane_pos"], info["manual_scale"], full_filename.as_posix()
@@ -69,9 +74,18 @@ def load_scene(buf_handler: BufferHandler, group_dir: Path):
             filename_to_text[rel_filename] = text
 
         # prepare the next file number
-        
         max_filenum = max(int(f.stem) for f in files) if files else 0
         buf_handler.last_file_nums[subdir] = max_filenum
+
+    # load the last active text
+    if meta.get("active_text"):
+        text = buf_handler.open_filename(
+            last_info["plane_pos"],
+            last_info["manual_scale"],
+            last_filename.as_posix(),
+        )
+        rel_filename = last_filename.relative_to(top_dir).as_posix()
+        filename_to_text[rel_filename] = text
 
     # connect them
     for rel_filename, text in filename_to_text.items():
@@ -79,6 +93,7 @@ def load_scene(buf_handler: BufferHandler, group_dir: Path):
         text.child_down = filename_to_text.get(info["child_down"])
         text.child_right = filename_to_text.get(info["child_right"])
         text.parent = filename_to_text.get(info["parent"])
+
     print(f"loaded {len(filename_to_text)} texts")
 
 
@@ -86,6 +101,14 @@ def save_scene(buf_handler: BufferHandler, nvim: Nvim, group_dir: Path):
     top_dir = group_dir.parent
     # record text metadata
     meta = {}
+
+    def get_rel_filename(text):
+        return (
+            Path(text.filename).relative_to(top_dir).as_posix()
+            if text is not None and text.filename is not None
+            else None
+        )
+
     for text in buf_handler.get_texts():
         if text.filename is None:
             # this buffer was not created by this program, so don't save it
@@ -95,21 +118,16 @@ def save_scene(buf_handler: BufferHandler, nvim: Nvim, group_dir: Path):
         meta[rel_filename] = dict(
             plane_pos=tuple(text.plane_pos.toTuple()),
             manual_scale=text.manual_scale,
-            child_down=Path(text.child_down.filename).relative_to(top_dir).as_posix()
-            if text.child_down
-            else None,
-            child_right=Path(text.child_right.filename).relative_to(top_dir).as_posix()
-            if text.child_right
-            else None,
-            parent=Path(text.parent.filename).relative_to(top_dir).as_posix()
-            if text.parent
-            else None,
+            child_down=get_rel_filename(text.child_down),
+            child_right=get_rel_filename(text.child_right),
+            parent=get_rel_filename(text.parent),
         )
 
     # record other data
     for subdir, hue in buf_handler.savedir_hues.items():
-        meta["hue"] = buf_handler.savedir_hues[subdir]
         meta[subdir.name] = dict(hue=hue)
+
+    meta["active_text"] = get_rel_filename(buf_handler.get_current_text())
 
     # save metadata json
     meta_path = top_dir / "meta.json"

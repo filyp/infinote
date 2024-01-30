@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="infinote-md",
-    version="0.2.1",  # Update the version number for new releases
+    version="0.2.2",  # Update the version number for new releases
     author="Filip Sondej",
     description="Feel the spatial freedom in your notes.",
     long_description_content_type="text/markdown",
@@ -20,6 +20,9 @@ setup(
         "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
         "Operating System :: OS Independent",
     ],
+    package_data={
+        "infinote": ["required.vim"],
+    },
     python_requires=">=3.10",
     entry_points={
         "console_scripts": [

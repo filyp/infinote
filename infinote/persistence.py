@@ -19,31 +19,31 @@ def _name_to_hue(name: str):
     return hue
 
 
-def load_scene(buf_handler: BufferHandler, main_subdir: Path):
+def load_scene(buf_handler: BufferHandler, group_dir: Path):
     filename_to_text = {}
-    top_dir = main_subdir.parent
+    top_dir = group_dir.parent
     top_dir.mkdir(parents=True, exist_ok=True)
     meta = {}
 
-    if not main_subdir.exists():
+    if not group_dir.exists():
         # save some initial hue for this dir
-        hue = _name_to_hue(main_subdir.stem)
-        meta[main_subdir.name] = dict(hue=hue)
-        buf_handler.savedir_hues[main_subdir] = hue
+        hue = _name_to_hue(group_dir.stem)
+        meta[group_dir.name] = dict(hue=hue)
+        buf_handler.savedir_hues[group_dir] = hue
 
     meta_path = top_dir / "meta.json"
     if not meta_path.exists():
         print(f"opening a new workspace in {top_dir}")
         # if there is no meta, top_dir should be empty
-        assert not any(top_dir.iterdir()), f"top_dir not empty: {top_dir}"
+        assert not any(top_dir.iterdir()), f"workdir_dir not empty: {top_dir}"
         # create the main subdir
-        main_subdir.mkdir(exist_ok=True)
+        group_dir.mkdir(exist_ok=True)
         # create one text
-        buf_handler.create_text(main_subdir, Config.initial_position)
+        buf_handler.create_text(group_dir, Config.initial_position)
         return
 
     # create the main subdir
-    main_subdir.mkdir(exist_ok=True)
+    group_dir.mkdir(exist_ok=True)
     meta.update(json.loads(meta_path.read_text()))
     subdirs = [d for d in top_dir.iterdir() if d.is_dir()]
     print(f"subdirs: {subdirs}")
@@ -82,8 +82,8 @@ def load_scene(buf_handler: BufferHandler, main_subdir: Path):
     print(f"loaded {len(filename_to_text)} texts")
 
 
-def save_scene(buf_handler: BufferHandler, nvim: Nvim, main_subdir: Path):
-    top_dir = main_subdir.parent
+def save_scene(buf_handler: BufferHandler, nvim: Nvim, group_dir: Path):
+    top_dir = group_dir.parent
     # record text metadata
     meta = {}
     for text in buf_handler.get_texts():

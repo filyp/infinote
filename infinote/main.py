@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -23,7 +24,14 @@ class MainWindow(QMainWindow):
 
 def main():
     assert len(sys.argv) == 2, "usage: infinote <savedir>"
-    main_subdir = Path(sys.argv[1])
+    group_dir = Path(sys.argv[1]).resolve()
+    workspace_dir = group_dir.parent
+    # change working directory to the workspace directory
+    # so that nvim can find the bookmark file
+    
+    workspace_dir.mkdir(parents=True, exist_ok=True)
+    os.chdir(workspace_dir)
+    print(workspace_dir)
 
     nvim = pynvim.attach(
         "child", argv=["/usr/bin/env", "nvim", "--embed", "--headless"]
@@ -33,7 +41,7 @@ def main():
     # nvim = pynvim.attach('socket', path='/tmp/nvim')  # there's no speedup to this
 
     app = QApplication(sys.argv)
-    view = GraphicView(nvim, main_subdir)
+    view = GraphicView(nvim, group_dir)
     buf_handler = view.buf_handler
     w = MainWindow(view)
 
@@ -42,7 +50,7 @@ def main():
 
     assert len(nvim.buffers) == 1, "we require nvim to start with one buffer"
 
-    load_scene(buf_handler, main_subdir)
+    load_scene(buf_handler, group_dir)
     view.global_scale = view.get_scale_centered_on_text(buf_handler.get_current_text())
     buf_handler.to_redraw.update(buf_handler.buf_num_to_text.keys())
 
@@ -50,7 +58,7 @@ def main():
     buf_handler.update_all_texts()
 
     exit_code = app.exec()
-    save_scene(buf_handler, nvim, main_subdir)
+    save_scene(buf_handler, nvim, group_dir)
     sys.exit(exit_code)
 
 

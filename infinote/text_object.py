@@ -209,8 +209,7 @@ class DraggableText(QGraphicsProxyWidget):
 
         # take the actual filename from the buffer
         buf_filename = self.buffer.name
-        # make it relative to Path.cwd()
-        buf_filename = Path(buf_filename).relative_to(Path.cwd()).as_posix()
+        buf_filename = Path(buf_filename).resolve().as_posix()
         # make sure the actual filename is the same as given one
         assert buf_filename == self.filename, (buf_filename, self.filename)
 

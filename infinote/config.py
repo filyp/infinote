@@ -3,6 +3,7 @@ import re
 from PySide6.QtGui import QColor, QFont
 
 
+# (note: the order of modifiers must be M-, A-, S-, C-)
 qwerty_keys = {
     # move to neighbors
     "<A-j>": "move down",
@@ -10,13 +11,13 @@ qwerty_keys = {
     "<A-h>": "move left",
     "<A-l>": "move right",
     # create a child of the current text box, down of it
-    "<A-S-j>": "create child down",
+    "<M-A-j>": "create child down",
     # create a child of the current text box, right of it
-    "<A-S-l>": "create child right",
+    "<M-A-l>": "create child right",
     # catch a child and insert it down
-    "<A-C-j>": "catch child down",
+    "<A-S-j>": "catch child down",
     # catch a child and insert it right
-    "<A-C-l>": "catch child right",
+    "<A-S-l>": "catch child right",
     # zooming
     "<A-y>": "zoom down",
     "<A-o>": "zoom up",
@@ -31,13 +32,13 @@ colemak_keys = {
     "<A-m>": "move left",
     "<A-i>": "move right",
     # create a child of the current text box, down of it
-    "<A-S-n>": "create child down",
+    "<M-A-n>": "create child down",
     # create a child of the current text box, right of it
-    "<A-S-i>": "create child right",
+    "<M-A-i>": "create child right",
     # catch a child and insert it down
-    "<A-C-n>": "catch child down",
+    "<A-S-n>": "catch child down",
     # catch a child and insert it right
-    "<A-C-i>": "catch child right",
+    "<A-S-i>": "catch child right",
     # zooming
     "<A-j>": "zoom down",
     "<A-y>": "zoom up",
@@ -49,11 +50,11 @@ colemak_keys = {
 
 class Config:
     autoshrink = True
-    text_width = 550
+    text_width = 400
     text_max_height = text_width * 1.618
     initial_position = (500, 40)
     text_gap = 6
-    starting_box_scale = 0.6
+    starting_box_scale = 0.75
 
     # closer to 1 is slower (must be larger than 1)
     scroll_speed = 1.0005
@@ -76,7 +77,7 @@ class Config:
     text_brightness = "80%"
     selection_brightness = "23%"
     non_persistent_hue = 341
-    sign_color = QColor.fromHsl(289, 100, 28)
+    sign_color = QColor.fromHsl(289, 100, 38)
 
     leader_key = ","
     # supported single key codes, and single key codes preceded with leader key
@@ -104,7 +105,8 @@ class Config:
     # font sizes for each indent level
     # font_sizes = [16] * 4 + [14] * 4 + [11] * 4
     # font_sizes = [15] * 4 + [14] * 4 + [11] * 4
-    font_sizes = [14] * 4 + [11] * 4 + [8] * 4
+    # font_sizes = [14] * 4 + [11] * 4 + [8] * 4
+    font_sizes = [14] * 4 + [11] * 4 + [11] * 4
     # font_sizes = [11] * 4 + [8] * 4 + [6] * 4
     # some font sizes cause indent problems:
     # note that the problems also depent on the intended indent of that font

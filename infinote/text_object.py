@@ -383,6 +383,9 @@ class DraggableText(QGraphicsProxyWidget):
 
     def draw_sign_lines(self, lines):
         for sign_line in self.sign_lines:
+            if sign_line > len(lines):
+                # print("warning: bookmarked line no longer exists")
+                continue
             line_width = len(lines[sign_line - 1])
             self.highlight(Config.sign_color, (sign_line, 1), (sign_line, line_width))
 

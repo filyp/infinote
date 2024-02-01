@@ -49,10 +49,17 @@ class GraphicView(QGraphicsView):
         self.scene().addWidget(self.status_bar)
 
     def _render_status_bar(self):
-        if not self.nvim.api.get_mode()["blocking"]:
+        mode_dict = self.nvim.api.get_mode()
+        if not mode_dict["blocking"]:
             num_unbound_buffers = self.buf_handler.get_num_unbound_buffers()
             if num_unbound_buffers > 0:
                 self.msg(f"{num_unbound_buffers} unbound buffer exists")
+            
+            if mode_dict["mode"] == "c":
+                # the command mode was entered not by us, but externally
+                # (we never actually enter it from infinote)
+                # here we only try to match what is being input into the command line
+                self.key_handler.external_command_mode = True
 
         command_line = self.key_handler.get_command_line()
         if command_line:

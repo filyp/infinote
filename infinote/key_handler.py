@@ -54,13 +54,17 @@ class KeyHandler:
 
         self.command = ""
         self.command_mode = False
+        self.external_command_mode = False
         self.search_mode = False
         self.backward_search_mode = False
         self._leader_key_last_pressed = False
 
     def _absorb_key_into_command_line(self, text, event):
         if text == "<Esc>":
+            if self.external_command_mode:
+                self.nvim.input("<Esc>")
             self.command_mode = False
+            self.external_command_mode = False
             self.search_mode = False
             self.backward_search_mode = False
             self.command = ""
@@ -69,11 +73,14 @@ class KeyHandler:
         elif text == "<CR>":
             if self.command_mode:
                 self.nvim.input(f":{self.command}<CR>")
+            elif self.external_command_mode:
+                self.nvim.input(f"{self.command}<CR>")
             elif self.search_mode:
                 self.nvim.input(f"/{self.command}<CR>")
             elif self.backward_search_mode:
                 self.nvim.input(f"?{self.command}<CR>")
             self.command_mode = False
+            self.external_command_mode = False
             self.search_mode = False
             self.backward_search_mode = False
             self.command = ""
@@ -91,13 +98,11 @@ class KeyHandler:
             return
 
         mode = self.nvim.api.get_mode()["mode"]
-        # assert mode != "c", "there should be no way to get into command mode"
-        if mode != "n":
+        if mode != "n" and mode != "c":
             # send that key
             self.nvim.input(text)
             return
-
-        # if we're here, we're in normal mode
+        # if we're here, we're in normal or command mode
 
         # handle custom commands
         if self._leader_key_last_pressed:
@@ -106,7 +111,12 @@ class KeyHandler:
             return
 
         # monitor command and search input
-        if self.command_mode or self.search_mode or self.backward_search_mode:
+        if (
+            self.command_mode
+            or self.external_command_mode
+            or self.search_mode
+            or self.backward_search_mode
+        ):
             # eat the keypress into self.command
             self._absorb_key_into_command_line(text, event)
             return
@@ -130,6 +140,8 @@ class KeyHandler:
     def get_command_line(self):
         if self.command_mode:
             return ":" + self.command
+        elif self.external_command_mode:
+            return ":... " + self.command
         elif self.search_mode:
             return "/" + self.command
         elif self.backward_search_mode:

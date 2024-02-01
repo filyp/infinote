@@ -1,6 +1,10 @@
 TODO
-better running and creation, simpler
-handle blocked .mode() call somehow, timeout? but how to replicate now to test?
+- [ ] LLM support
+    - vim-ai can't be used, because it blocks while streaming
+    - so either handle that streaming, or just write it myself
+- [x] better running and creation, simpler
+- handle blocked .mode() call somehow, timeout? but how to replicate now to test?
+    - looks mostly solved? doesn't happen anymore I think
 
 record some demo
 bookmarks can just be changed by swapping the .vim-bookmarks file

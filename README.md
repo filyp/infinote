@@ -2,13 +2,16 @@
 
 *Feel the spatial freedom in your notes.*
 
+It's like a crossover between taking notes on paper and in vim, trying to keep the benefits of both, but also with some unique features not possible in either.
+
+You have an infinitely expanding canvas on which you place notes. Each note has its own neovim buffer, and all your neovim config from your `~/.config/nvim/init.vim` will work. The notes will be saved as plain markdown files.
+
 ## Instalation
+
+Requires neovim to run.
 
 ```bash
 pipx install infinote-md
-
-echo source $(ls ~/.local/pipx/venvs/infinote-md/lib64/python3.*/site-packages/infinote/required.vim) >> ~/.vimrc
-(or for neovim:)
 echo source $(ls ~/.local/pipx/venvs/infinote-md/lib64/python3.*/site-packages/infinote/required.vim) >> ~/.config/nvim/init.vim
 ```
 

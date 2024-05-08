@@ -11,19 +11,19 @@ qwerty_keys = {
     "<A-h>": "move left",
     "<A-l>": "move right",
     # create a child of the current text box, down of it
-    "<M-A-j>": "create child down",
+    "<A-S-j>": "create child down",
     # create a child of the current text box, right of it
-    "<M-A-l>": "create child right",
+    "<A-S-l>": "create child right",
     # catch a child and insert it down
-    "<A-S-j>": "catch child down",
+    "<M-A-j>": "catch child down",
     # catch a child and insert it right
-    "<A-S-l>": "catch child right",
+    "<M-A-l>": "catch child right",
     # zooming
     "<A-y>": "zoom down",
     "<A-o>": "zoom up",
     # resizing box
-    "<A-u>": "grow box",
-    "<A-i>": "shrink box",
+    "<A-i>": "grow box",
+    "<A-u>": "shrink box",
 }
 colemak_keys = {
     # move to neighbors
@@ -32,19 +32,19 @@ colemak_keys = {
     "<A-m>": "move left",
     "<A-i>": "move right",
     # create a child of the current text box, down of it
-    "<M-A-n>": "create child down",
+    "<A-S-n>": "create child down",
     # create a child of the current text box, right of it
-    "<M-A-i>": "create child right",
+    "<A-S-i>": "create child right",
     # catch a child and insert it down
-    "<A-S-n>": "catch child down",
+    "<M-A-n>": "catch child down",
     # catch a child and insert it right
-    "<A-S-i>": "catch child right",
+    "<M-A-i>": "catch child right",
     # zooming
     "<A-j>": "zoom down",
     "<A-y>": "zoom up",
     # resizing box
-    "<A-l>": "grow box",
-    "<A-u>": "shrink box",
+    "<A-u>": "grow box",
+    "<A-l>": "shrink box",
 }
 
 

@@ -312,6 +312,10 @@ class BufferHandler:
             self.jumplist.append(current_buf.number)
             self.forward_jumplist = []
             self.jumplist = self.jumplist[-30:]
+            # if we jumped, make sure we are in insert mode (in case of leap or other motions)
+            if not Config.vim_mode and mode_info["mode"] == "n":
+                self.nvim.command("startinsert")
+                mode_info = self.nvim.api.get_mode()
 
         self._redraw(mode_info, current_buf)
 

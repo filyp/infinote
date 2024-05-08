@@ -92,12 +92,19 @@ class KeyHandler:
         if text is None:
             return
 
+        mode = self.nvim.api.get_mode()["mode"]
         if text in Config.keys:
             # custom command pressed
-            self.handle_custom_command(text)
+            self.handle_custom_command(text, mode)
             return
 
-        mode = self.nvim.api.get_mode()["mode"]
+        if not Config.vim_mode and mode == "i" and text == "<Esc>":
+            # don't allow leaving insert mode
+            return
+        if text == "<C-i>" or text == "<C-o>":
+            # don't allow this, because they create unwanted buffers
+            return
+
         if mode != "n" and mode != "c":
             # send that key
             self.nvim.input(text)
@@ -105,9 +112,10 @@ class KeyHandler:
         # if we're here, we're in normal or command mode
 
         # handle custom commands
+        # note: this functionality will probably be removed
         if self._leader_key_last_pressed:
             self._leader_key_last_pressed = False
-            self.handle_custom_command(Config.leader_key + text)
+            self.handle_custom_command(Config.leader_key + text, mode)
             return
 
         # monitor command and search input
@@ -149,7 +157,7 @@ class KeyHandler:
         else:
             return ""
 
-    def handle_custom_command(self, key_combo):
+    def handle_custom_command(self, key_combo, mode):
         if key_combo not in Config.keys:
             return
         command = Config.keys[key_combo]
@@ -159,9 +167,13 @@ class KeyHandler:
 
         match command:
             case "hop":
-                cmd = ":lua require('leap').leap { target_windows = vim.api.nvim_list_wins() }"
+                if mode == "i":
+                    self.nvim.input("<Esc>")
+                cmd = "lua require('leap').leap { target_windows = vim.api.nvim_list_wins() }"
                 self.nvim.input(f":{cmd}<CR>")
             case "bookmark jump":
+                if mode == "i":
+                    self.nvim.input("<Esc>")
                 cmd = (
                     '<Home>"fyt|f|<Right>"lyiw:buffer<Space><C-r>f<Enter>:<C-r>l<Enter>'
                 )

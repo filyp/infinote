@@ -180,6 +180,8 @@ class GraphicView(QGraphicsView):
         y = text.plane_pos.y()
         window_width = self.screen().size().width()
         window_height = self.screen().size().height()
+        if self.buf_handler.show_editor:
+            window_width *= 1 - Config.editor_width_ratio
 
         center_scale_x = window_width / (x * 2 + text.get_plane_width())
         center_scale_y = window_height / (y * 2 + text.get_plane_height())
@@ -191,6 +193,8 @@ class GraphicView(QGraphicsView):
         y = text.plane_pos.y()
         window_width = self.screen().size().width()
         window_height = self.screen().size().height()
+        if self.buf_handler.show_editor:
+            window_width *= 1 - Config.editor_width_ratio
 
         width_scale = window_width / (x + text.get_plane_width())
         width_scale *= 1 - Config.min_gap_win_edge * 9 / 16

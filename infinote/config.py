@@ -3,13 +3,16 @@ import re
 from PySide6.QtGui import QColor, QFont
 
 
+# mod = "A"  # main modifier used for the keybindings
+mod = "C"  # todo change back
+
 # (note: the order of modifiers must be M-, A-, S-, C-)
 qwerty_keys = {
     # move to neighbors
-    "<A-j>": "move down",
-    "<A-k>": "move up",
-    "<A-h>": "move left",
-    "<A-l>": "move right",
+    f"<{mod}-j>": "move down",
+    f"<{mod}-k>": "move up",
+    f"<{mod}-h>": "move left",
+    f"<{mod}-l>": "move right",
     # create a child of the current text box, down of it
     "<A-S-j>": "create child down",
     # create a child of the current text box, right of it
@@ -19,18 +22,18 @@ qwerty_keys = {
     # catch a child and insert it right
     "<M-A-l>": "catch child right",
     # zooming
-    "<A-y>": "zoom down",
-    "<A-o>": "zoom up",
+    f"<{mod}-y>": "zoom down",
+    f"<{mod}-o>": "zoom up",
     # resizing box
-    "<A-i>": "grow box",
-    "<A-u>": "shrink box",
+    f"<{mod}-i>": "grow box",
+    f"<{mod}-u>": "shrink box",
 }
 colemak_keys = {
     # move to neighbors
-    "<A-n>": "move down",
-    "<A-e>": "move up",
-    "<A-m>": "move left",
-    "<A-i>": "move right",
+    f"<{mod}-n>": "move down",
+    f"<{mod}-e>": "move up",
+    f"<{mod}-m>": "move left",
+    f"<{mod}-i>": "move right",
     # create a child of the current text box, down of it
     "<A-S-n>": "create child down",
     # create a child of the current text box, right of it
@@ -40,15 +43,20 @@ colemak_keys = {
     # catch a child and insert it right
     "<M-A-i>": "catch child right",
     # zooming
-    "<A-j>": "zoom down",
-    "<A-y>": "zoom up",
+    f"<{mod}-j>": "zoom down",
+    f"<{mod}-y>": "zoom up",
     # resizing box
-    "<A-u>": "grow box",
-    "<A-l>": "shrink box",
+    f"<{mod}-u>": "grow box",
+    f"<{mod}-l>": "shrink box",
 }
 
 
 class Config:
+    # if False, you will be kept in insert mode and so saved from vimming
+    # todo change back
+    # vim_mode = False
+    vim_mode = True
+
     autoshrink = True
     text_width = 400
     text_max_height = text_width * 1.618
@@ -80,26 +88,29 @@ class Config:
     editor_width_ratio = 1 / 3  # part of screen width for the editor
     sign_color = QColor.fromHsl(289, 100, 38)
 
+    # note: in the future leader_key will probably be removed to simplify
     leader_key = ","
     # supported single key codes, and single key codes preceded with leader key
     # (note: the order of modifiers must be M-, A-, S-, C-)
+    # keys that cannot be used: hjkl yuio men p
     keys = {
         # Teleport to any text using leap plugin
-        "<A-t>": "hop",
+        f"<{mod}-t>": "hop",
         # Center view on the current text box
-        "<A-c>": "center on current text",
+        f"<{mod}-c>": "center on current text",
         # zoom in, pushing the current box to the Right
-        "<A-r>": "maximize on current text",
-        # custom C-o and C-i, because normal ones create unwanted buffers
-        "<C-o>": "jump back",
-        "<C-i>": "jump forward",
-        "<A-Left>": "jump back",
-        "<A-Right>": "jump forward",
+        f"<{mod}-r>": "maximize on current text",
+        # custom C-o andC-i, because normal ones create unwanted buffers
+        # "<C-o>": "jump back",
+        # "<C-i>": "jump forward",
+        f"<{mod}-Left>": "jump back",
+        f"<{mod}-Right>": "jump forward",
         # when in bookmarks window, jump to location of bookmark under cursor
-        ",b": "bookmark jump",
+        f"<{mod}-b>": "bookmark jump",
         # toggle editor View
-        "<A-v>": "toggle editor",
+        f"<{mod}-v>": "toggle editor",
     }
+    # todo change back
     # keys.update(qwerty_keys)
     keys.update(colemak_keys)
 

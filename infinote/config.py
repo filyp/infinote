@@ -77,25 +77,31 @@ class Config:
     text_brightness = "80%"
     selection_brightness = "23%"
     non_persistent_hue = 341
+    editor_width_ratio = 1 / 3  # part of screen width for the editor
     sign_color = QColor.fromHsl(289, 100, 38)
 
     leader_key = ","
     # supported single key codes, and single key codes preceded with leader key
     # (note: the order of modifiers must be M-, A-, S-, C-)
     keys = {
-        # hop to any text using leap plugin
-        ",h": "hop",
-        # when in bookmarks window, jump to location of bookmark under cursor
-        ",b": "bookmark jump",
-        # center view on the current text box
-        ",c": "center on current text",
-        # zoom in as much as possible, while keeping the current text box in view
-        ",m": "maximize on current text",
+        # Teleport to any text using leap plugin
+        "<A-t>": "hop",
+        # Center view on the current text box
+        "<A-c>": "center on current text",
+        # zoom in, pushing the current box to the Right
+        "<A-r>": "maximize on current text",
         # custom C-o and C-i, because normal ones create unwanted buffers
         "<C-o>": "jump back",
         "<C-i>": "jump forward",
+        "<A-Left>": "jump back",
+        "<A-Right>": "jump forward",
+        # when in bookmarks window, jump to location of bookmark under cursor
+        ",b": "bookmark jump",
+        # toggle editor View
+        "<A-v>": "toggle editor",
     }
-    keys.update(qwerty_keys)
+    # keys.update(qwerty_keys)
+    keys.update(colemak_keys)
 
     # relevant for zooming and resizing with keys
     FPS = 180

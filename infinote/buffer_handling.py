@@ -5,7 +5,7 @@ from typing import List
 from PySide6.QtCore import QPointF
 
 from infinote.config import Config
-from infinote.text_object import DraggableText, is_buf_empty
+from infinote.text_object import DraggableText, EditorBox, is_buf_empty
 
 
 class BufferHandler:
@@ -20,10 +20,13 @@ class BufferHandler:
         self.savedir_hues = {}
         self.to_redraw = set()
         self.catch_child = None
+        self.show_editor = True
+
+        self.editor_box = EditorBox(nvim, self.nvim.current.buffer, view)
+        self.view.scene().addItem(self.editor_box)
 
     def get_num_unbound_buffers(self):
         return len(self.nvim.buffers) - len(self.buf_num_to_text)
-
 
     def open_filename(self, pos, manual_scale, filename=None, buffer=None):
         if isinstance(pos, (tuple, list)):
@@ -346,10 +349,12 @@ class BufferHandler:
             extmarks = all_extmarks[buf_num]
             text.insides_renderer.update_text(lines, extmarks)
 
-        # draw the things that current buffer has
+        # draw the things that the current buffer has
         current_text = self.buf_num_to_text[current_buf.number]
         lines = all_lines[current_buf.number]
-        current_text.insides_renderer.update_current_text(mode_info, cur_buf_info, lines)
+        current_text.insides_renderer.update_current_text(
+            mode_info, cur_buf_info, lines
+        )
 
         # draw sign lines
         for buf_num in to_redraw:
@@ -369,6 +374,20 @@ class BufferHandler:
         # reposition all text boxes
         for text in self.get_root_texts():
             text.reposition()
+
+        # draw the editor
+        if self.show_editor:
+            buf_num = current_buf.number
+            lines = all_lines[buf_num]
+            extmarks = all_extmarks[buf_num]
+            self.editor_box.insides_renderer.update_text(lines, extmarks)
+            self.editor_box.insides_renderer.update_current_text(
+                mode_info, cur_buf_info, lines
+            )
+            self.editor_box.insides_renderer.draw_sign_lines(lines)
+            self.editor_box.insides_renderer.draw_cursor(mode_info, cur_buf_info)
+            self.editor_box.insides_renderer.set_invisible_cursor_pos()
+            self.editor_box.insides_renderer.hide_folds()
 
         ####################################################
 

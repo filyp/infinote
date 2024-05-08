@@ -42,6 +42,7 @@ class GraphicView(QGraphicsView):
         screen_size = self.screen().size()
         self.status_bar = QStatusBar()
         # place it at the top and display
+        # 20 is added to hide the weird handle on the right
         self.status_bar.setGeometry(0, 0, screen_size.width() + 20, 20)
         color = Config.background_color
         self.status_bar.setStyleSheet("QStatusBar{background-color: " + color + ";}")
@@ -76,6 +77,9 @@ class GraphicView(QGraphicsView):
         super().resizeEvent(event)
 
     def mousePressEvent(self, event):
+        # ignore non-left clicks
+        if event.button() != Qt.LeftButton:
+            return
         self._message = []
         item = self.scene().itemAt(event.screenPos(), self.transform())
         if isinstance(item, DraggableText):

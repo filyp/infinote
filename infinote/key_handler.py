@@ -217,3 +217,10 @@ class KeyHandler:
             case "catch child right":
                 buf_handler.catch_child = "right"
                 view.msg("catching child right")
+            case "toggle editor":
+                if buf_handler.show_editor:
+                    buf_handler.show_editor = False
+                    buf_handler.editor_box.hide()
+                else:
+                    buf_handler.show_editor = True
+                    buf_handler.editor_box.show()

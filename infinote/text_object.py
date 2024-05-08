@@ -41,27 +41,29 @@ class NonSelectableTextEdit(QTextEdit):
 
 
 class TextboxInsidesRenderer:
-    def __init__(self, hue, init_folds, init_signs):
+    def __init__(self, hue, init_folds, init_signs, style=None, set_width=True):
         self.text_box = NonSelectableTextEdit()
-        self.text_box.setFixedWidth(Config.text_width)
+        if set_width:
+            self.text_box.setFixedWidth(Config.text_width)
         self.folds = init_folds
         self._set_sign_lines(init_signs)
         self.cursor_pos = 0
 
-        style = f"""
-            QTextEdit {{
-                background-color: {Config.background_color};
-                border: 1px solid hsl({hue}, 96%, {Config.border_brightness});
-                color: hsl({hue}, 96%, {Config.text_brightness});
-            }}
-            QScrollBar:vertical {{
-                width: 15px;
-                background: {Config.background_color};
-            }}
-            QScrollBar::handle:vertical {{
-                background-color: hsl({hue}, 96%, {Config.border_brightness});
-            }}
-        """
+        if style is None:
+            style = f"""
+                QTextEdit {{
+                    background-color: {Config.background_color};
+                    border: 1px solid hsl({hue}, 96%, {Config.border_brightness});
+                    color: hsl({hue}, 96%, {Config.text_brightness});
+                }}
+                QScrollBar:vertical {{
+                    width: 15px;
+                    background: {Config.background_color};
+                }}
+                QScrollBar::handle:vertical {{
+                    background-color: hsl({hue}, 96%, {Config.border_brightness});
+                }}
+            """
         self.text_box.setStyleSheet(style)
         self.text_color = QColor()
         self.text_color.setHsl(hue, 96, int(Config.text_brightness[:-1]))
@@ -70,7 +72,6 @@ class TextboxInsidesRenderer:
 
         doc = self.text_box.document()
         doc.setIndentWidth(1)
-
 
     def _yx_to_pos(self, y, x):
         # get the one number char position
@@ -306,10 +307,8 @@ class DraggableText(QGraphicsProxyWidget):
         signs = nvim.eval("sign_getplaced()")
 
         self.insides_renderer = TextboxInsidesRenderer(hue, folds, signs)
-        # todo is this needed
-        self.text_box = self.insides_renderer.text_box
 
-        self.setWidget(self.text_box)
+        self.setWidget(self.insides_renderer.text_box)
 
     # position related functions:
 
@@ -342,9 +341,9 @@ class DraggableText(QGraphicsProxyWidget):
         # for some reason it needs to be done twice, to prevent a glitch
         # only the smaller of those two heights is valid
         height = self._calculate_height()
-        self.text_box.setFixedHeight(height)
+        self.insides_renderer.text_box.setFixedHeight(height)
         height = min(self._calculate_height(), height)
-        self.text_box.setFixedHeight(height)
+        self.insides_renderer.text_box.setFixedHeight(height)
         self._height = height
 
         self.place_down_children()
@@ -382,7 +381,7 @@ class DraggableText(QGraphicsProxyWidget):
             self.child_right.reposition()
 
     def _calculate_height(self):
-        height = self.text_box.document().size().height() + 2
+        height = self.insides_renderer.text_box.document().size().height() + 2
         height = min(height, Config.text_max_height)
         return height
 
@@ -414,10 +413,55 @@ class DraggableText(QGraphicsProxyWidget):
         nvim.command("w")
 
 
+class EditorBox(QGraphicsProxyWidget):
+    def __init__(self, nvim, buffer_handle, view):
+        super().__init__()
+        self.view = view
+        assert buffer_handle == nvim.current.buffer  # for correct fold & sign fetching
 
-# class EditorBox(DraggableText):
-#     def __init__(self, nvim, buffer_handle, filename, view, plane_pos, manual_scale):
-#         filename = None
-#         super().__init__(nvim, buffer_handle, filename, view, plane_pos, manual_scale)
+        hue = 180
+        saturation = 0
+        text_brightness = "100%"
+        style = f"""
+            QTextEdit {{
+                background-color: {Config.background_color};
+                border: 3px solid hsl({hue}, {saturation}%, {Config.border_brightness});
+                color: hsl({hue}, {saturation}%, {text_brightness});
+            }}
+            QScrollBar:vertical {{
+                width: 15px;
+                background: {Config.background_color};
+            }}
+            QScrollBar::handle:vertical {{
+                background-color: hsl({hue}, {saturation}%, {Config.border_brightness});
+            }}
+        """
 
-        # self.setWidget(self.text_box)
+        self.insides_renderer = TextboxInsidesRenderer(
+            hue=hue,
+            # get folds and signs for potential future drawing
+            init_folds=nvim.eval("GetAllFolds()"),
+            init_signs=nvim.eval("sign_getplaced()"),
+            style=style,
+            set_width=False,
+        )
+
+        self.setWidget(self.insides_renderer.text_box)
+
+        # get screen dimensions
+        screen = self.view.screen()
+        x = screen.size().width()
+        y = screen.size().height()
+        print(x, y)
+
+        # the box must take full height and right 1/3 of the screen
+        margin = 0
+        self.setGeometry(
+            x * (1 - Config.editor_width_ratio),
+            margin,
+            x * Config.editor_width_ratio - margin - 1,
+            y - 2 * margin - 2,
+        )
+
+        # make sure it is on top
+        self.setZValue(1)

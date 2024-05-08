@@ -40,49 +40,14 @@ class NonSelectableTextEdit(QTextEdit):
         event.ignore()
 
 
-class DraggableText(QGraphicsProxyWidget):
-    def __init__(self, nvim, buffer_handle, filename, view, plane_pos, manual_scale):
-        super().__init__()
-
-        self.autoshrink = Config.autoshrink
-
-        # note that num doesn't need to be the same as buffer_handle.number
-        self.buffer = buffer_handle
-        self.filename = filename
-        self.view = view
-        self.plane_pos = plane_pos
-        self.manual_scale = manual_scale
-        self.setScale(manual_scale)
-        self.child_down = None
-        self.child_right = None
-        self.parent = None
-        self.pin_pos = None
-        self.folds = []
-        self.sign_lines = []
-        self._height = 0
-        self.cursor_pos = 0
-
+class TextboxInsidesRenderer:
+    def __init__(self, hue, init_folds, init_signs):
         self.text_box = NonSelectableTextEdit()
         self.text_box.setFixedWidth(Config.text_width)
+        self.folds = init_folds
+        self._set_sign_lines(init_signs)
+        self.cursor_pos = 0
 
-        # get folds for potential future fold drawing
-        assert self.buffer == nvim.current.buffer
-        self.folds = nvim.eval("GetAllFolds()")
-
-        signs = nvim.eval("sign_getplaced()")
-        self._set_sign_lines(signs)
-
-        # optionally, send some input on creation
-        if is_buf_empty(self.buffer) and Config.input_on_creation:
-            nvim.command("startinsert")
-            nvim.input(Config.input_on_creation)
-
-        if filename is None:
-            # it's non-persistent buffer, so mark its border yellow
-            hue = Config.non_persistent_hue
-        else:
-            savedir = Path(filename).parent
-            hue = self.view.buf_handler.savedir_hues[savedir]
         style = f"""
             QTextEdit {{
                 background-color: {Config.background_color};
@@ -98,7 +63,6 @@ class DraggableText(QGraphicsProxyWidget):
             }}
         """
         self.text_box.setStyleSheet(style)
-
         self.text_color = QColor()
         self.text_color.setHsl(hue, 96, int(Config.text_brightness[:-1]))
         self.selection_color = QColor()
@@ -107,116 +71,11 @@ class DraggableText(QGraphicsProxyWidget):
         doc = self.text_box.document()
         doc.setIndentWidth(1)
 
-        self.setWidget(self.text_box)
-
-    # position related functions:
-
-    def mouseMoveEvent(self, event):
-        # drag around
-        mouse_end = QPointF(event.screenPos() / self.view.global_scale)
-        displacement = self.get_plane_scale() * self.pin_pos
-        self.plane_pos = mouse_end - displacement
-
-        self.reposition()
-        self.view.dummy.setFocus()
-
-        self.detach_parent()
-
-    def get_plane_scale(self):
-        if self.autoshrink:
-            # euclidean magniture of plane_pos
-            distance = (self.plane_pos.x() ** 2 + self.plane_pos.y() ** 2) ** 0.5
-            distance_scale = distance / Config._initial_distance
-            return self.manual_scale * distance_scale
-        else:
-            return self.manual_scale
-
-    def reposition(self):
-        global_scale = self.view.global_scale
-        self.setScale(self.get_plane_scale() * global_scale)
-        self.setPos(self.plane_pos * global_scale)
-
-        # set height
-        # for some reason it needs to be done twice, to prevent a glitch
-        # only the smaller of those two heights is valid
-        height = self._calculate_height()
-        self.text_box.setFixedHeight(height)
-        height = min(self._calculate_height(), height)
-        self.text_box.setFixedHeight(height)
-        self._height = height
-
-        self.place_down_children()
-        self.place_right_children()
 
     def _yx_to_pos(self, y, x):
         # get the one number char position
         doc = self.text_box.document()
         return doc.findBlockByLineNumber(y - 1).position() + x
-
-    def detach_parent(self):
-        # detach from parent
-        if self.parent is not None:
-            if self.parent.child_down == self:
-                self.parent.child_down = None
-            elif self.parent.child_right == self:
-                self.parent.child_right = None
-            self.parent = None
-
-    def detach_children(self):
-        if self.child_down is not None:
-            self.child_down.parent = None
-            self.child_down = None
-        if self.child_right is not None:
-            self.child_right.parent = None
-            self.child_right = None
-
-    def place_down_children(self):
-        if self.child_down is not None:
-            height = self.get_plane_height()
-            gap = Config.text_gap * self.get_plane_scale() / self.manual_scale
-            self.child_down.plane_pos = self.plane_pos + QPointF(0, height + gap)
-            self.child_down.reposition()
-
-    def place_right_children(self):
-        if self.child_right is not None:
-            width = self.get_plane_width()
-            gap = Config.text_gap * self.get_plane_scale() / self.manual_scale
-            self.child_right.plane_pos = self.plane_pos + QPointF(width + gap, 0)
-            self.child_right.reposition()
-
-    def _calculate_height(self):
-        height = self.text_box.document().size().height() + 2
-        height = min(height, Config.text_max_height)
-        return height
-
-    def get_plane_width(self):
-        return self.get_plane_scale() * Config.text_width
-
-    def get_plane_height(self):
-        # this needs to be called only after this node's reposition
-        return self.get_plane_scale() * self._height
-
-    def get_center(self):
-        # note: it's in screen coords, not plane coords
-        return self.mapToScene(self.rect().center())
-
-    # text related functions:
-
-    def save(self, nvim):
-        if self.filename is None:
-            # this buffer was not created by this program, so don't save it
-            return
-
-        # take the actual filename from the buffer
-        buf_filename = self.buffer.name
-        buf_filename = Path(buf_filename).resolve().as_posix()
-        # make sure the actual filename is the same as given one
-        assert buf_filename == self.filename, (buf_filename, self.filename)
-
-        # set this buffer as current
-        nvim.api.set_current_buf(self.buffer.number)
-        # save it
-        nvim.command("w")
 
     def highlight(self, color, start, end, invert=False):
         if not isinstance(color, QColor):
@@ -406,3 +265,159 @@ class DraggableText(QGraphicsProxyWidget):
         font_format.setFont(font)
         cursor.setCharFormat(font_format)
         self.text_box.setTextCursor(cursor)
+
+
+class DraggableText(QGraphicsProxyWidget):
+    def __init__(self, nvim, buffer_handle, filename, view, plane_pos, manual_scale):
+        super().__init__()
+
+        self.autoshrink = Config.autoshrink
+
+        # note that num doesn't need to be the same as buffer_handle.number
+        self.buffer = buffer_handle
+        self.filename = filename
+        self.view = view
+        self.plane_pos = plane_pos
+        self.manual_scale = manual_scale
+        self.setScale(manual_scale)
+        self.child_down = None
+        self.child_right = None
+        self.parent = None
+        self.pin_pos = None
+        self.folds = []
+        self.sign_lines = []
+        self._height = 0
+
+        # optionally, send some input on creation
+        if is_buf_empty(self.buffer) and Config.input_on_creation:
+            nvim.command("startinsert")
+            nvim.input(Config.input_on_creation)
+
+        if filename is None:
+            # it's non-persistent buffer, so mark its border yellow
+            hue = Config.non_persistent_hue
+        else:
+            savedir = Path(filename).parent
+            hue = self.view.buf_handler.savedir_hues[savedir]
+
+        # get folds and signs for potential future drawing
+        assert self.buffer == nvim.current.buffer
+        folds = nvim.eval("GetAllFolds()")
+        signs = nvim.eval("sign_getplaced()")
+
+        self.insides_renderer = TextboxInsidesRenderer(hue, folds, signs)
+        # todo is this needed
+        self.text_box = self.insides_renderer.text_box
+
+        self.setWidget(self.text_box)
+
+    # position related functions:
+
+    def mouseMoveEvent(self, event):
+        # drag around
+        mouse_end = QPointF(event.screenPos() / self.view.global_scale)
+        displacement = self.get_plane_scale() * self.pin_pos
+        self.plane_pos = mouse_end - displacement
+
+        self.reposition()
+        self.view.dummy.setFocus()
+
+        self.detach_parent()
+
+    def get_plane_scale(self):
+        if self.autoshrink:
+            # euclidean magniture of plane_pos
+            distance = (self.plane_pos.x() ** 2 + self.plane_pos.y() ** 2) ** 0.5
+            distance_scale = distance / Config._initial_distance
+            return self.manual_scale * distance_scale
+        else:
+            return self.manual_scale
+
+    def reposition(self):
+        global_scale = self.view.global_scale
+        self.setScale(self.get_plane_scale() * global_scale)
+        self.setPos(self.plane_pos * global_scale)
+
+        # set height
+        # for some reason it needs to be done twice, to prevent a glitch
+        # only the smaller of those two heights is valid
+        height = self._calculate_height()
+        self.text_box.setFixedHeight(height)
+        height = min(self._calculate_height(), height)
+        self.text_box.setFixedHeight(height)
+        self._height = height
+
+        self.place_down_children()
+        self.place_right_children()
+
+    def detach_parent(self):
+        # detach from parent
+        if self.parent is not None:
+            if self.parent.child_down == self:
+                self.parent.child_down = None
+            elif self.parent.child_right == self:
+                self.parent.child_right = None
+            self.parent = None
+
+    def detach_children(self):
+        if self.child_down is not None:
+            self.child_down.parent = None
+            self.child_down = None
+        if self.child_right is not None:
+            self.child_right.parent = None
+            self.child_right = None
+
+    def place_down_children(self):
+        if self.child_down is not None:
+            height = self.get_plane_height()
+            gap = Config.text_gap * self.get_plane_scale() / self.manual_scale
+            self.child_down.plane_pos = self.plane_pos + QPointF(0, height + gap)
+            self.child_down.reposition()
+
+    def place_right_children(self):
+        if self.child_right is not None:
+            width = self.get_plane_width()
+            gap = Config.text_gap * self.get_plane_scale() / self.manual_scale
+            self.child_right.plane_pos = self.plane_pos + QPointF(width + gap, 0)
+            self.child_right.reposition()
+
+    def _calculate_height(self):
+        height = self.text_box.document().size().height() + 2
+        height = min(height, Config.text_max_height)
+        return height
+
+    def get_plane_width(self):
+        return self.get_plane_scale() * Config.text_width
+
+    def get_plane_height(self):
+        # this needs to be called only after this node's reposition
+        return self.get_plane_scale() * self._height
+
+    def get_center(self):
+        # note: it's in screen coords, not plane coords
+        return self.mapToScene(self.rect().center())
+
+    def save(self, nvim):
+        if self.filename is None:
+            # this buffer was not created by this program, so don't save it
+            return
+
+        # take the actual filename from the buffer
+        buf_filename = self.buffer.name
+        buf_filename = Path(buf_filename).resolve().as_posix()
+        # make sure the actual filename is the same as given one
+        assert buf_filename == self.filename, (buf_filename, self.filename)
+
+        # set this buffer as current
+        nvim.api.set_current_buf(self.buffer.number)
+        # save it
+        nvim.command("w")
+
+
+
+# class EditorBox(DraggableText):
+#     def __init__(self, nvim, buffer_handle, filename, view, plane_pos, manual_scale):
+#         filename = None
+#         super().__init__(nvim, buffer_handle, filename, view, plane_pos, manual_scale)
+
+        # self.setWidget(self.text_box)

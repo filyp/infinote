@@ -337,34 +337,34 @@ class BufferHandler:
                 to_redraw.add(buf_num)
 
         ####################################################
-        # redraw itself
+        # actual redraw
 
         # initial redraw
         for buf_num in to_redraw:
             text = self.buf_num_to_text[buf_num]
             lines = all_lines[buf_num]
             extmarks = all_extmarks[buf_num]
-            text.update_text(lines, extmarks)
+            text.insides_renderer.update_text(lines, extmarks)
 
         # draw the things that current buffer has
         current_text = self.buf_num_to_text[current_buf.number]
         lines = all_lines[current_buf.number]
-        current_text.update_current_text(mode_info, cur_buf_info, lines)
+        current_text.insides_renderer.update_current_text(mode_info, cur_buf_info, lines)
 
         # draw sign lines
         for buf_num in to_redraw:
             text = self.buf_num_to_text[buf_num]
-            text.draw_sign_lines(all_lines[buf_num])
+            text.insides_renderer.draw_sign_lines(all_lines[buf_num])
 
         # draw cursor in current
-        current_text.draw_cursor(mode_info, cur_buf_info)
+        current_text.insides_renderer.draw_cursor(mode_info, cur_buf_info)
 
         # set (invisible) cursor, hide folds
         for buf_num in to_redraw:
             text = self.buf_num_to_text[buf_num]
             # hide folds deletes lines so it needs to be at the end
-            text.set_invisible_cursor_pos()
-            text.hide_folds()
+            text.insides_renderer.set_invisible_cursor_pos()
+            text.insides_renderer.hide_folds()
 
         # reposition all text boxes
         for text in self.get_root_texts():

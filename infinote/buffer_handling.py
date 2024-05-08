@@ -281,6 +281,8 @@ class BufferHandler:
         return cur_buf_info, all_lines, all_extmarks
 
     def update_all_texts(self):
+        # TODO this line hangs if vim-ai is completing
+        # so probably we'd neet to have our own completion
         mode_info = self.nvim.api.get_mode()
         if mode_info["blocking"]:
             return

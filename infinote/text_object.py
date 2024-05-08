@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 from PySide6.QtCore import QPointF, Qt
 from PySide6.QtGui import (
@@ -11,6 +12,8 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import QGraphicsProxyWidget, QTextBrowser, QTextEdit
 
 from infinote.config import Config
+
+# from PySide6.QtWidgets import QGraphicsDropShadowEffect
 
 
 def is_buf_empty(buf):
@@ -69,6 +72,7 @@ class TextboxInsidesRenderer:
         self.text_color.setHsl(hue, 96, int(Config.text_brightness[:-1]))
         self.selection_color = QColor()
         self.selection_color.setHsl(hue, 96, int(Config.selection_brightness[:-1]))
+        self._border_glowing = False
 
         doc = self.text_box.document()
         doc.setIndentWidth(1)
@@ -168,6 +172,9 @@ class TextboxInsidesRenderer:
         cursor = self.text_box.textCursor()
         cursor.setPosition(0)
         self.text_box.setTextCursor(cursor)
+        
+        # make sure border is not glowing
+        self.set_border_glow(False)
 
     def update_current_text(self, mode_info, cur_buf_info, lines):
         # this function if called only if this node's buffer is the current buffer
@@ -199,6 +206,9 @@ class TextboxInsidesRenderer:
             x_end = max(s[1], e[1])
             for y in range(s[0], e[0] + 1):
                 self.highlight(self.selection_color, (y, x_start), (y, x_end))
+
+        # make the text border glow
+        self.set_border_glow(True)
 
     def draw_cursor(self, mode_info, cur_buf_info):
         mode = mode_info["mode"]
@@ -267,6 +277,19 @@ class TextboxInsidesRenderer:
         cursor.setCharFormat(font_format)
         self.text_box.setTextCursor(cursor)
 
+    def set_border_glow(self, state):
+        if state == self._border_glowing:
+            return
+        # replace border brightness
+        brightness = Config.text_brightness if state else Config.border_brightness
+        style = re.sub(
+            r"(border: 1px solid hsl\(.*, .*,) (.*)\);",
+            rf"\1 {brightness});",
+            self.text_box.styleSheet(),
+        )
+        self.text_box.setStyleSheet(style)
+        self._border_glowing = state
+
 
 class DraggableText(QGraphicsProxyWidget):
     def __init__(self, nvim, buffer_handle, filename, view, plane_pos, manual_scale):
@@ -319,7 +342,7 @@ class DraggableText(QGraphicsProxyWidget):
         self.plane_pos = mouse_end - displacement
 
         self.reposition()
-        self.view.dummy.setFocus()
+        # self.view.dummy.setFocus()
 
         self.detach_parent()
 
@@ -425,7 +448,7 @@ class EditorBox(QGraphicsProxyWidget):
         style = f"""
             QTextEdit {{
                 background-color: {Config.background_color};
-                border: 3px solid hsl({hue}, {saturation}%, {Config.border_brightness});
+                border: 1px solid hsl({hue}, {saturation}%, {Config.text_brightness});
                 color: hsl({hue}, {saturation}%, {text_brightness});
             }}
             QScrollBar:vertical {{
@@ -452,14 +475,13 @@ class EditorBox(QGraphicsProxyWidget):
         screen = self.view.screen()
         x = screen.size().width()
         y = screen.size().height()
-        print(x, y)
 
         # the box must take full height and right 1/3 of the screen
         margin = 0
         self.setGeometry(
             x * (1 - Config.editor_width_ratio),
             margin,
-            x * Config.editor_width_ratio - margin - 1,
+            x * Config.editor_width_ratio - margin - 2,
             y - 2 * margin - 2,
         )
 

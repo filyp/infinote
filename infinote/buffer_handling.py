@@ -24,6 +24,10 @@ class BufferHandler:
 
         self.editor_box = EditorBox(nvim, self.nvim.current.buffer, view)
         self.view.scene().addItem(self.editor_box)
+        
+        # start in insert mode if not in vim mode
+        if not Config.vim_mode:
+            self.nvim.command("startinsert")
 
     def get_num_unbound_buffers(self):
         return len(self.nvim.buffers) - len(self.buf_num_to_text)
@@ -366,8 +370,14 @@ class BufferHandler:
             text.insides_renderer.draw_sign_lines(all_lines[buf_num])
 
         # draw cursor in current
-        current_text.insides_renderer.draw_cursor(mode_info, cur_buf_info)
-
+        if not self.show_editor:
+            # only draw if editor is hidden
+            # otherwise, normal mode curson is shown but insert mode cursor not
+            # and that's confusing
+            # we'd need to find a way to display two cursors,
+            # but only one widget can have focus
+            current_text.insides_renderer.draw_cursor(mode_info, cur_buf_info)
+        
         # set (invisible) cursor, hide folds
         for buf_num in to_redraw:
             text = self.buf_num_to_text[buf_num]

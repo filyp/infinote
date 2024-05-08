@@ -98,7 +98,10 @@ class GraphicView(QGraphicsView):
             self.buf_handler.update_all_texts()
 
         super().mousePressEvent(event)
-        item.setFocus()
+        if self.buf_handler.show_editor:
+            self.buf_handler.editor_box.setFocus()
+        else:
+            item.setFocus()
         self._render_status_bar()
 
     def keyPressEvent(self, event):

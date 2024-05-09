@@ -20,11 +20,7 @@ class BufferHandler:
         self.savedir_hues = {}
         self.to_redraw = set()
         self.catch_child = None
-        self.show_editor = True
 
-        self.editor_box = EditorBox(nvim, self.nvim.current.buffer, view)
-        self.view.scene().addItem(self.editor_box)
-        
         # start in insert mode if not in vim mode
         if not Config.vim_mode:
             self.nvim.command("startinsert")
@@ -370,7 +366,8 @@ class BufferHandler:
             text.insides_renderer.draw_sign_lines(all_lines[buf_num])
 
         # draw cursor in current
-        if not self.show_editor:
+        if not self.view.show_editor:
+            # note: it's deprecated
             # only draw if editor is hidden
             # otherwise, normal mode curson is shown but insert mode cursor not
             # and that's confusing
@@ -390,18 +387,19 @@ class BufferHandler:
             text.reposition()
 
         # draw the editor
-        if self.show_editor:
+        if self.view.show_editor:
             buf_num = current_buf.number
             lines = all_lines[buf_num]
             extmarks = all_extmarks[buf_num]
-            self.editor_box.insides_renderer.update_text(lines, extmarks)
-            self.editor_box.insides_renderer.update_current_text(
+            editor_box = self.view.editor_box
+            editor_box.insides_renderer.update_text(lines, extmarks)
+            editor_box.insides_renderer.update_current_text(
                 mode_info, cur_buf_info, lines
             )
-            self.editor_box.insides_renderer.draw_sign_lines(lines)
-            self.editor_box.insides_renderer.draw_cursor(mode_info, cur_buf_info)
-            self.editor_box.insides_renderer.set_invisible_cursor_pos()
-            self.editor_box.insides_renderer.hide_folds()
+            editor_box.insides_renderer.draw_sign_lines(lines)
+            editor_box.insides_renderer.draw_cursor(mode_info, cur_buf_info)
+            editor_box.insides_renderer.set_invisible_cursor_pos()
+            editor_box.insides_renderer.hide_folds()
 
         ####################################################
 

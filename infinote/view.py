@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
 from infinote.buffer_handling import BufferHandler
 from infinote.config import Config
 from infinote.key_handler import KeyHandler
-from infinote.text_object import DraggableText
+from infinote.text_object import DraggableText, EditorBox
 
 
 class GraphicView(QGraphicsView):
@@ -49,13 +49,17 @@ class GraphicView(QGraphicsView):
         self._message = []
         self.scene().addWidget(self.status_bar)
 
+        self.editor_box = EditorBox(nvim, self.nvim.current.buffer, self)
+        self.scene().addItem(self.editor_box)
+        self.show_editor = True
+
     def _render_status_bar(self):
         mode_dict = self.nvim.api.get_mode()
         if not mode_dict["blocking"]:
             num_unbound_buffers = self.buf_handler.get_num_unbound_buffers()
             if num_unbound_buffers > 0:
                 self.msg(f"{num_unbound_buffers} unbound buffer exists")
-            
+
             if mode_dict["mode"] == "c":
                 # the command mode was entered not by us, but externally
                 # (we never actually enter it from infinote)
@@ -82,6 +86,7 @@ class GraphicView(QGraphicsView):
             return
         self._message = []
         item = self.scene().itemAt(event.screenPos(), self.transform())
+
         if isinstance(item, DraggableText):
             # clicked on text, so make it current
             self.buf_handler.jump_to_buffer(item.buffer.number)
@@ -90,22 +95,33 @@ class GraphicView(QGraphicsView):
             # pin the click position, in case of dragging
             click_pos = event.screenPos() / self.global_scale
             item.pin_pos = (click_pos - item.plane_pos) / item.get_plane_scale()
+            # pass if event is drag
+            print(event)
+            super().mousePressEvent(event)
+        elif isinstance(item, EditorBox):
+            # we need to first process the click by the widget to set curson in it
+            super().mousePressEvent(event)
+            item.insides_renderer.sync_qt_cursor_into_vim(self.nvim)
+            self.buf_handler.update_all_texts()
         else:
             # clicked bg, so create a new text
             item = self.buf_handler.create_text(
                 self.current_folder, event.screenPos() / self.global_scale
             )
             self.buf_handler.update_all_texts()
+            # super().mousePressEvent(event)
 
-        super().mousePressEvent(event)
-        if self.buf_handler.show_editor:
-            self.buf_handler.editor_box.setFocus()
+        if self.show_editor:
+            self.editor_box.setFocus()
         else:
             item.setFocus()
         self._render_status_bar()
 
     def keyPressEvent(self, event):
         self._message = []
+
+        self.editor_box.insides_renderer.if_qt_selection_sync_into_vim(self.nvim)
+
         self.key_handler.handle_key_event(event)
         self.buf_handler.update_all_texts()
         self._render_status_bar()
@@ -115,10 +131,13 @@ class GraphicView(QGraphicsView):
         zoom_factor = Config.scroll_speed ** (event.angleDelta().y() * direction)
 
         item = self.scene().itemAt(event.position(), self.transform())
-        if isinstance(item, DraggableText) and Config.scroll_can_resize_text:
-            # zoom it
-            item.manual_scale *= zoom_factor
-            item.reposition()
+        if isinstance(item, EditorBox):
+            # handle text scroll normally
+            super().wheelEvent(event)
+        # elif isinstance(item, DraggableText) and Config.scroll_can_resize_text:
+        #     # zoom it
+        #     item.manual_scale *= zoom_factor
+        #     item.reposition()
         else:
             # zoom the whole view
             self.global_scale *= zoom_factor
@@ -183,7 +202,7 @@ class GraphicView(QGraphicsView):
         y = text.plane_pos.y()
         window_width = self.screen().size().width()
         window_height = self.screen().size().height()
-        if self.buf_handler.show_editor:
+        if self.show_editor:
             window_width *= 1 - Config.editor_width_ratio
 
         center_scale_x = window_width / (x * 2 + text.get_plane_width())
@@ -196,7 +215,7 @@ class GraphicView(QGraphicsView):
         y = text.plane_pos.y()
         window_width = self.screen().size().width()
         window_height = self.screen().size().height()
-        if self.buf_handler.show_editor:
+        if self.show_editor:
             window_width *= 1 - Config.editor_width_ratio
 
         width_scale = window_width / (x + text.get_plane_width())

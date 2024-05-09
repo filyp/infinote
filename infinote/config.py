@@ -70,8 +70,8 @@ class Config:
     scroll_invert = False
     # speed of zooming left/right with keys (must be larger than 1)
     key_zoom_speed = 3
-    # whether to allow resizing text boxes with mouse wheel
-    scroll_can_resize_text = False
+    # # whether to allow resizing text boxes with mouse wheel
+    # scroll_can_resize_text = False
     # when jumping to neighbor, if no text is connected in chosen direction,
     # jump to closest disconnected text in that direction
     allow_disconnected_jumps = True

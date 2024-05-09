@@ -25,27 +25,28 @@ def is_buf_empty(buf):
     return False
 
 
-# class NonSelectableTextEdit(QTextBrowser):
-class NonSelectableTextEdit(QTextEdit):
-    def mousePressEvent(self, event):
-        # Skip the mouse press event to prevent it from being handled by QTextBrowser
-        event.ignore()
+# # class NonSelectableTextEdit(QTextBrowser):
+# class NonSelectableTextEdit(QTextEdit):
+#     def mousePressEvent(self, event):
+#         # Skip the mouse press event to prevent it from being handled by QTextBrowser
+#         event.ignore()
 
-    def mouseMoveEvent(self, event):
-        # Skip the mouse move event to prevent it from being handled by QTextBrowser
-        event.ignore()
+#     def mouseMoveEvent(self, event):
+#         # Skip the mouse move event to prevent it from being handled by QTextBrowser
+#         event.ignore()
 
-    def mouseReleaseEvent(self, event):
-        # Skip the mouse release event to prevent it from being handled by QTextBrowser
-        event.ignore()
+#     def mouseReleaseEvent(self, event):
+#         # Skip the mouse release event to prevent it from being handled by QTextBrowser
+#         event.ignore()
 
-    def keyPressEvent(self, event):
-        event.ignore()
+#     def keyPressEvent(self, event):
+#         event.ignore()
 
 
 class TextboxInsidesRenderer:
     def __init__(self, hue, init_folds, init_signs, style=None, set_width=True):
-        self.text_box = NonSelectableTextEdit()
+        # self.text_box = NonSelectableTextEdit()
+        self.text_box = QTextEdit()
         if set_width:
             self.text_box.setFixedWidth(Config.text_width)
         self.folds = init_folds
@@ -82,6 +83,14 @@ class TextboxInsidesRenderer:
         doc = self.text_box.document()
         return doc.findBlockByLineNumber(y - 1).position() + x
 
+    def _pos_to_yx(self, pos):
+        # todo this will fail if some lines are hidden
+        doc = self.text_box.document()
+        block = doc.findBlock(pos)
+        y = block.blockNumber() + 1
+        x = pos - block.position()
+        return y, x
+
     def highlight(self, color, start, end, invert=False):
         if not isinstance(color, QColor):
             color = QColor(color)
@@ -104,6 +113,34 @@ class TextboxInsidesRenderer:
         while block.isValid():
             yield block
             block = block.next()
+
+    def sync_qt_cursor_into_vim(self, nvim):
+        cursor = self.text_box.textCursor()
+        cursor_pos = cursor.position()
+        y, x = self._pos_to_yx(cursor_pos)
+        nvim.api.win_set_cursor(0, (y, x))
+
+    def if_qt_selection_sync_into_vim(self, nvim):
+        # cursors https://doc.qt.io/qt-6/qtextedit.html#using-qtextedit-as-an-editor
+        cursor = self.text_box.textCursor()
+        # check if editor has selection
+        if not cursor.hasSelection():
+            return
+
+        y_start, x_start = self._pos_to_yx(cursor.selectionStart())
+        y_end, x_end = self._pos_to_yx(cursor.selectionEnd() - 1)
+
+        nvim.input("<Esc>")
+        nvim.api.win_set_cursor(0, (y_start, x_start))
+        nvim.input("v")
+        nvim.api.win_set_cursor(0, (y_end, x_end))
+        
+        # todo it will be buggy for now
+        # in non-vim mode, backspace should do d
+        # everything else chould be c...
+        # we could now stop drawing manually vim selection
+        # but then we also need sync it from vim into qt
+        # and maybe change the style into something nicer in qt
 
     def _format_displayed_lines(self):
         # set the fancy formatting, with nice indents and decreasing font sizes
@@ -172,7 +209,7 @@ class TextboxInsidesRenderer:
         cursor = self.text_box.textCursor()
         cursor.setPosition(0)
         self.text_box.setTextCursor(cursor)
-        
+
         # make sure border is not glowing
         self.set_border_glow(False)
 
@@ -336,15 +373,20 @@ class DraggableText(QGraphicsProxyWidget):
     # position related functions:
 
     def mouseMoveEvent(self, event):
+        # # this reserves dragging for ctrl+drag, and normal selection for drag
+        # is_ctrl_pressed = event.modifiers() & Qt.ControlModifier
+        # if not is_ctrl_pressed:
+        #     super().mouseMoveEvent(event)
+        #     return
+
         # drag around
         mouse_end = QPointF(event.screenPos() / self.view.global_scale)
         displacement = self.get_plane_scale() * self.pin_pos
         self.plane_pos = mouse_end - displacement
 
+        self.detach_parent()
         self.reposition()
         # self.view.dummy.setFocus()
-
-        self.detach_parent()
 
     def get_plane_scale(self):
         if self.autoshrink:

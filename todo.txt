@@ -6,6 +6,9 @@ TODO
 - handle blocked .mode() call somehow, timeout? but how to replicate now to test?
     - looks mostly solved? doesn't happen anymore I think
 
+estetics:
+- add subtle glow to the currently selected box https://doc.qt.io/qt-5/qml-qtgraphicaleffects-glow.html
+
 record some demo
 bookmarks can just be changed by swapping the .vim-bookmarks file
    but this seems to require that nvim is inactive during swap, otherwise weird

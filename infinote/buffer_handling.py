@@ -171,9 +171,9 @@ class BufferHandler:
         self.forward_jumplist.append(old)
         self.jump_to_buffer(self.jumplist[-1])
         self.to_redraw.add(old)
-        old_buf = self.nvim.buffers[old]
-        if is_buf_empty(old_buf) or old_buf[:] == [Config.input_on_creation]:
-            self.delete_buf(old_buf)
+        # old_buf = self.nvim.buffers[old]
+        # if is_buf_empty(old_buf) or old_buf[:] == [Config.input_on_creation]:
+        #     self.delete_buf(old_buf)
 
     def jump_forward(self):
         if len(self.forward_jumplist) == 0:
@@ -183,9 +183,9 @@ class BufferHandler:
         new = self.forward_jumplist.pop()
         self.jumplist.append(new)
         self.jump_to_buffer(new)
-        old_buf = self.nvim.buffers[old]
-        if is_buf_empty(old_buf) or old_buf[:] == [Config.input_on_creation]:
-            self.delete_buf(old_buf)
+        # old_buf = self.nvim.buffers[old]
+        # if is_buf_empty(old_buf) or old_buf[:] == [Config.input_on_creation]:
+        #     self.delete_buf(old_buf)
 
     def reattach_text(self, parent_text, child_text):
         child_text.detach_parent()
@@ -216,12 +216,12 @@ class BufferHandler:
             ]
         )[0]
 
-        # delete last buf if it's empty and unfocused
-        if self.jumplist[-1] != current_buffer.number:
-            _last_buf = self.nvim.buffers[self.jumplist[-1]]
-            if is_buf_empty(_last_buf) or _last_buf[:] == [Config.input_on_creation]:
-                self.delete_buf(_last_buf)
-            current_buffer = self.nvim.current.buffer
+        # # delete last buf if it's empty and unfocused
+        # if self.jumplist[-1] != current_buffer.number:
+        #     _last_buf = self.nvim.buffers[self.jumplist[-1]]
+        #     if is_buf_empty(_last_buf) or _last_buf[:] == [Config.input_on_creation]:
+        #         self.delete_buf(_last_buf)
+        #     current_buffer = self.nvim.current.buffer
 
         # make sure current tab has the current buffer
         # get the num of wins in this tab

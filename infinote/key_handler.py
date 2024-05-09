@@ -236,3 +236,5 @@ class KeyHandler:
                 else:
                     view.show_editor = True
                     view.editor_box.show()
+            case "delete text":
+                buf_handler.delete_buf(self.nvim.current.buffer)

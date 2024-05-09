@@ -94,6 +94,7 @@ class Config:
     # (note: the order of modifiers must be M-, A-, S-, C-)
     # keys that cannot be used: hjkl yuio men p
     keys = {
+        "<C-w>": "delete text",
         # Teleport to any text using leap plugin
         f"<{mod}-t>": "hop",
         # Center view on the current text box

@@ -25,28 +25,26 @@ def is_buf_empty(buf):
     return False
 
 
-# # class NonSelectableTextEdit(QTextBrowser):
-# class NonSelectableTextEdit(QTextEdit):
-#     def mousePressEvent(self, event):
-#         # Skip the mouse press event to prevent it from being handled by QTextBrowser
-#         event.ignore()
+class IgnoringKeysTextEdit(QTextEdit):
+    # def mousePressEvent(self, event):
+    #     # Skip the mouse press event to prevent it from being handled by QTextBrowser
+    #     event.ignore()
 
-#     def mouseMoveEvent(self, event):
-#         # Skip the mouse move event to prevent it from being handled by QTextBrowser
-#         event.ignore()
+    # def mouseMoveEvent(self, event):
+    #     # Skip the mouse move event to prevent it from being handled by QTextBrowser
+    #     event.ignore()
 
-#     def mouseReleaseEvent(self, event):
-#         # Skip the mouse release event to prevent it from being handled by QTextBrowser
-#         event.ignore()
+    # def mouseReleaseEvent(self, event):
+    #     # Skip the mouse release event to prevent it from being handled by QTextBrowser
+    #     event.ignore()
 
-#     def keyPressEvent(self, event):
-#         event.ignore()
+    def keyPressEvent(self, event):
+        event.ignore()
 
 
 class TextboxInsidesRenderer:
     def __init__(self, hue, init_folds, init_signs, style=None, set_width=True):
-        # self.text_box = NonSelectableTextEdit()
-        self.text_box = QTextEdit()
+        self.text_box = IgnoringKeysTextEdit()
         if set_width:
             self.text_box.setFixedWidth(Config.text_width)
         self.folds = init_folds
@@ -140,6 +138,8 @@ class TextboxInsidesRenderer:
         # everything else chould be c...
         # we could now stop drawing manually vim selection
         # but then we also need sync it from vim into qt
+        #     actually we can't bc rect selection can't be represented
+        #     so just set the same style
         # and maybe change the style into something nicer in qt
 
     def _format_displayed_lines(self):
@@ -261,6 +261,8 @@ class TextboxInsidesRenderer:
         self.cursor_pos = pos
 
     def hide_folds(self):
+        if self.folds == []:
+            return
         # set folds
         head_lines = set()
         hidden_lines = set()
@@ -284,6 +286,37 @@ class TextboxInsidesRenderer:
                 cursor.setPosition(block.position() + block.length() - 1)
                 cursor.insertText(" ...")
                 block = block.next()
+            else:
+                block = block.next()
+            line_num += 1
+        
+    def hide_indented_lines(self):
+        # todo don't hide if 
+        lines = self.text_box.toPlainText().split("\n")
+        line_nums_to_hide = []
+        for i, line in enumerate(lines):
+            if line.strip() == "":
+                # keep empty lines
+                continue
+            if i + 1 in self.sign_lines:
+                # keep bookmarked lines
+                continue
+            if line[0] == " " or line[0] == "\t":
+                line_nums_to_hide.append(i)
+
+        # delete the lines
+        # note: it would be more efficient to only draw from the start what is necessary
+        # but that complicates text marking positionings
+        # maybe do it in the future if this part looks slow during profiling
+        block = self.text_box.document().begin()
+        cursor = self.text_box.textCursor()
+        line_num = 0
+        while block.isValid():
+            if line_num in line_nums_to_hide:
+                cursor.setPosition(block.position())
+                cursor.select(QTextCursor.BlockUnderCursor)
+                block = block.next()
+                cursor.removeSelectedText()
             else:
                 block = block.next()
             line_num += 1

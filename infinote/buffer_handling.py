@@ -378,9 +378,10 @@ class BufferHandler:
         # set (invisible) cursor, hide folds
         for buf_num in to_redraw:
             text = self.buf_num_to_text[buf_num]
-            # hide folds deletes lines so it needs to be at the end
-            text.insides_renderer.set_invisible_cursor_pos()
-            text.insides_renderer.hide_folds()
+            # # hide folds deletes lines so it needs to be at the end
+            # text.insides_renderer.set_invisible_cursor_pos()
+            # text.insides_renderer.hide_folds() # todo maybe add it back later
+            text.insides_renderer.hide_indented_lines()
 
         # reposition all text boxes
         for text in self.get_root_texts():
@@ -399,7 +400,7 @@ class BufferHandler:
             editor_box.insides_renderer.draw_sign_lines(lines)
             editor_box.insides_renderer.draw_cursor(mode_info, cur_buf_info)
             editor_box.insides_renderer.set_invisible_cursor_pos()
-            editor_box.insides_renderer.hide_folds()
+            # editor_box.insides_renderer.hide_folds() # todo maybe add it back later
 
         ####################################################
 

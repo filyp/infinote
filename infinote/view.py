@@ -16,6 +16,12 @@ from infinote.key_handler import KeyHandler
 from infinote.text_object import DraggableText, EditorBox
 
 
+def _exit_visual_mode(nvim):
+    mode = nvim.api.get_mode()["mode"] 
+    if mode == "v" or mode == "V" or mode == "\x16":
+        nvim.input("<Esc>")
+
+
 class GraphicView(QGraphicsView):
     def __init__(self, nvim, main_subdir, parent=None):
         super().__init__(parent)
@@ -99,7 +105,8 @@ class GraphicView(QGraphicsView):
             print(event)
             super().mousePressEvent(event)
         elif isinstance(item, EditorBox):
-            # we need to first process the click by the widget to set curson in it
+            _exit_visual_mode(self.nvim)
+            # we need to first process the click by the widget to set cursor in it
             super().mousePressEvent(event)
             item.insides_renderer.sync_qt_cursor_into_vim(self.nvim)
             self.buf_handler.update_all_texts()

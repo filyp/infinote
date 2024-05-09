@@ -59,7 +59,7 @@ class Config:
 
     autoshrink = True
     text_width = 400
-    text_max_height = text_width * 1.618
+    text_max_height = text_width  # * 1.618
     initial_position = (500, 40)
     text_gap = 6
     starting_box_scale = 0.75
@@ -107,8 +107,9 @@ class Config:
         f"<{mod}-Right>": "jump forward",
         # when in bookmarks window, jump to location of bookmark under cursor
         f"<{mod}-b>": "bookmark jump",
-        # toggle editor View
-        f"<{mod}-v>": "toggle editor",
+        # todo remove this option and this functionality?
+        # # toggle editor View
+        # f"<{mod}-v>": "toggle editor",
     }
     # todo change back
     # keys.update(qwerty_keys)

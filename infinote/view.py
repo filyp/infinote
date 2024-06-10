@@ -102,7 +102,6 @@ class GraphicView(QGraphicsView):
             click_pos = event.screenPos() / self.global_scale
             item.pin_pos = (click_pos - item.plane_pos) / item.get_plane_scale()
             # pass if event is drag
-            print(event)
             super().mousePressEvent(event)
         elif isinstance(item, EditorBox):
             _exit_visual_mode(self.nvim)

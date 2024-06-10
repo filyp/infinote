@@ -104,8 +104,8 @@ class Config:
         # custom C-o andC-i, because normal ones create unwanted buffers
         # "<C-o>": "jump back",
         # "<C-i>": "jump forward",
-        f"<{mod}-Left>": "jump back",
-        f"<{mod}-Right>": "jump forward",
+        "<A-Left>": "jump back",
+        "<A-Right>": "jump forward",
         # when in bookmarks window, jump to location of bookmark under cursor
         f"<{mod}-b>": "bookmark jump",
         # todo remove this option and this functionality?

@@ -13,6 +13,7 @@ setup(
         "PySide6",
         "pynvim",
         "colormath",
+        "boltons",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

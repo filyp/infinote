@@ -132,7 +132,7 @@ class TextboxInsidesRenderer:
         nvim.api.win_set_cursor(0, (y_start, x_start))
         nvim.input("v")
         nvim.api.win_set_cursor(0, (y_end, x_end))
-        
+
         # todo it will be buggy for now
         # in non-vim mode, backspace should do d
         # everything else chould be c...
@@ -289,9 +289,9 @@ class TextboxInsidesRenderer:
             else:
                 block = block.next()
             line_num += 1
-        
+
     def hide_indented_lines(self):
-        # todo don't hide if 
+        # todo don't hide if
         lines = self.text_box.toPlainText().split("\n")
         line_nums_to_hide = []
         for i, line in enumerate(lines):
@@ -362,7 +362,8 @@ class TextboxInsidesRenderer:
 
 
 class DraggableText(QGraphicsProxyWidget):
-    def __init__(self, nvim, buffer_handle, filename, view, plane_pos, manual_scale):
+    # it has position related functions
+    def __init__(self, nvim, buffer_handle, filename, view, plane_pos, manual_scale, all_parents):
         super().__init__()
 
         self.autoshrink = Config.autoshrink
@@ -373,9 +374,8 @@ class DraggableText(QGraphicsProxyWidget):
         self.view = view
         self.plane_pos = plane_pos
         self.manual_scale = manual_scale
+        self.all_parents = all_parents
         self.setScale(manual_scale)
-        self.child_right = None
-        self.parent = None
         self.pin_pos = None
         self.folds = []
         self.sign_lines = []
@@ -402,8 +402,6 @@ class DraggableText(QGraphicsProxyWidget):
 
         self.setWidget(self.insides_renderer.text_box)
 
-    # position related functions:
-
     def mouseMoveEvent(self, event):
         # # this reserves dragging for ctrl+drag, and normal selection for drag
         # is_ctrl_pressed = event.modifiers() & Qt.ControlModifier
@@ -416,7 +414,7 @@ class DraggableText(QGraphicsProxyWidget):
         displacement = self.get_plane_scale() * self.pin_pos
         self.plane_pos = mouse_end - displacement
 
-        self.detach_parent()
+        self.all_parents[self] = None
         self.reposition()
         # self.view.dummy.setFocus()
 
@@ -442,26 +440,15 @@ class DraggableText(QGraphicsProxyWidget):
         height = min(self._calculate_height(), height)
         self.insides_renderer.text_box.setFixedHeight(height)
         self._height = height
-        self.place_right_children()
 
-    def detach_parent(self):
-        # detach from parent
-        if self.parent is not None:
-            elif self.parent.child_right == self:
-                self.parent.child_right = None
-            self.parent = None
-
-    def detach_children(self):
-        if self.child_right is not None:
-            self.child_right.parent = None
-            self.child_right = None
-
-    def place_right_children(self):
-        if self.child_right is not None:
-            width = self.get_plane_width()
-            gap = Config.text_gap * self.get_plane_scale() / self.manual_scale
-            self.child_right.plane_pos = self.plane_pos + QPointF(width + gap, 0)
-            self.child_right.reposition()
+        # place children
+        children = self.all_parents.inverted().getlist(self)
+        width = self.get_plane_width()
+        gap = Config.text_gap * self.get_plane_scale() / self.manual_scale
+        for child in children:
+            # todo stack height
+            child.plane_pos = self.plane_pos + QPointF(width + gap, 0)
+            child.reposition()
 
     def _calculate_height(self):
         height = self.insides_renderer.text_box.document().size().height() + 2

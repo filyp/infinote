@@ -90,8 +90,7 @@ def load_scene(buf_handler: BufferHandler, group_dir: Path):
     # connect them
     for rel_filename, text in filename_to_text.items():
         info = meta[rel_filename]
-        text.child_right = filename_to_text.get(info["child_right"])
-        text.parent = filename_to_text.get(info["parent"])
+        buf_handler.parents[text] = filename_to_text.get(info["parent"])
 
     print(f"loaded {len(filename_to_text)} texts")
 
@@ -117,8 +116,7 @@ def save_scene(buf_handler: BufferHandler, nvim: Nvim, group_dir: Path):
         meta[rel_filename] = dict(
             plane_pos=tuple(text.plane_pos.toTuple()),
             manual_scale=text.manual_scale,
-            child_right=get_rel_filename(text.child_right),
-            parent=get_rel_filename(text.parent),
+            parent=get_rel_filename(buf_handler.parents.get(text)),
         )
 
     # record other data

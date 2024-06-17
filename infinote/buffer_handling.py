@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List
 
 from PySide6.QtCore import QPointF
+from boltons.dictutils import OrderedMultiDict
 
 from infinote.config import Config
 from infinote.text_object import DraggableText, EditorBox, is_buf_empty
@@ -19,6 +20,7 @@ class BufferHandler:
         self.last_file_nums = defaultdict(lambda: 0)
         self.savedir_hues = {}
         self.to_redraw = set()
+        self.parents = OrderedMultiDict()
 
         # start in insert mode if not in vim mode
         if not Config.vim_mode:
@@ -50,7 +52,9 @@ class BufferHandler:
         else:
             raise ValueError("either buffer or filename must be provided")
 
-        text = DraggableText(self.nvim, buffer, filename, self.view, pos, manual_scale)
+        text = DraggableText(
+            self.nvim, buffer, filename, self.view, pos, manual_scale, self.parents
+        )
         self.view.scene().addItem(text)
 
         self.buf_num_to_text[buffer.number] = text
@@ -87,9 +91,7 @@ class BufferHandler:
             assert len(wins) == 1, "each tab must have exactly one window"
             candidate_buf_num = self.nvim.api.win_get_buf(wins[0]).number
             candidate_filename = self.nvim.api.buf_get_name(candidate_buf_num)
-            candidate_filename = (
-                Path(candidate_filename).relative_to(Path.cwd()).as_posix()
-            )
+            candidate_filename = Path(candidate_filename).relative_to(Path.cwd()).as_posix()
             if candidate_filename == filename:
                 # found it
                 tab_num = tab.number
@@ -99,6 +101,11 @@ class BufferHandler:
 
     def delete_buf(self, buf):
         text = self.buf_num_to_text.get(buf.number)
+        # don't allow deleting if it has children
+        children = self.parents.inverted().getlist(text)
+        if children:
+            self.view.msg("can't delete a text with children")
+            return
 
         if text.filename is not None:
             # delete the file
@@ -107,10 +114,6 @@ class BufferHandler:
         self.nvim.command(f"bwipeout! {buf.number}")
         self.view.scene().removeItem(text)
         self.buf_num_to_text.pop(buf.number)
-
-        # detach
-        text.detach_parent()
-        text.detach_children()
 
         # delete from jumplists
         self.jumplist = [x for x in self.jumplist if x != buf.number]
@@ -124,8 +127,8 @@ class BufferHandler:
     def get_root_texts(self):
         roots = set()
         for text in self.get_texts():
-            while text.parent is not None:
-                text = text.parent
+            while self.parents.get(text) is not None:
+                text = self.parents[text]
             roots.add(text)
         return roots
 
@@ -140,14 +143,9 @@ class BufferHandler:
             self.view.msg("can't create children for non-persistent buffers")
             return
 
-        if current_text.child_right is not None:
-            self.view.msg("right child already exists")
-            return
         child = self.create_text(self.view.current_folder, (0, 0))
-        current_text.child_right = child
-
-        child.parent = current_text
-        child.parent.reposition()
+        self.parents[child] = current_text
+        self.parents[child].reposition()
 
         if Config.track_jumps_on_neighbor_moves:
             self.view.track_jump(current_text, child)
@@ -189,9 +187,7 @@ class BufferHandler:
         # get the num of wins in this tab
         if len(wins) != 1:
             bufs_in_tab = {self.nvim.api.win_get_buf(win): win for win in wins}
-            unbound_bufs = [
-                buf for buf in bufs_in_tab if buf.number not in self.buf_num_to_text
-            ]
+            unbound_bufs = [buf for buf in bufs_in_tab if buf.number not in self.buf_num_to_text]
             for unb_buf in unbound_bufs:
                 # delete its window
                 win = bufs_in_tab[unb_buf]
@@ -260,10 +256,7 @@ class BufferHandler:
         current_buf = self._sanitize_buffers()
 
         # grow jumplist
-        if (
-            current_buf.number != self.jumplist[-1]
-            and current_buf.number in self.buf_num_to_text
-        ):
+        if current_buf.number != self.jumplist[-1] and current_buf.number in self.buf_num_to_text:
             self.jumplist.append(current_buf.number)
             self.forward_jumplist = []
             self.jumplist = self.jumplist[-30:]
@@ -311,9 +304,7 @@ class BufferHandler:
         # draw the things that the current buffer has
         current_text = self.buf_num_to_text[current_buf.number]
         lines = all_lines[current_buf.number]
-        current_text.insides_renderer.update_current_text(
-            mode_info, cur_buf_info, lines
-        )
+        current_text.insides_renderer.update_current_text(mode_info, cur_buf_info, lines)
 
         # draw sign lines
         for buf_num in to_redraw:
@@ -329,7 +320,7 @@ class BufferHandler:
             # we'd need to find a way to display two cursors,
             # but only one widget can have focus
             current_text.insides_renderer.draw_cursor(mode_info, cur_buf_info)
-        
+
         # set (invisible) cursor, hide folds
         for buf_num in to_redraw:
             text = self.buf_num_to_text[buf_num]
@@ -349,9 +340,7 @@ class BufferHandler:
             extmarks = all_extmarks[buf_num]
             editor_box = self.view.editor_box
             editor_box.insides_renderer.update_text(lines, extmarks)
-            editor_box.insides_renderer.update_current_text(
-                mode_info, cur_buf_info, lines
-            )
+            editor_box.insides_renderer.update_current_text(mode_info, cur_buf_info, lines)
             editor_box.insides_renderer.draw_sign_lines(lines)
             editor_box.insides_renderer.draw_cursor(mode_info, cur_buf_info)
             editor_box.insides_renderer.set_invisible_cursor_pos()

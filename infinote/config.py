@@ -60,9 +60,6 @@ class Config:
     key_zoom_speed = 3
     # # whether to allow resizing text boxes with mouse wheel
     # scroll_can_resize_text = False
-    # when jumping to neighbor, if no text is connected in chosen direction,
-    # jump to closest disconnected text in that direction
-    allow_disconnected_jumps = True
 
     # whether to change zoom level on jumps to a neighbor text
     track_jumps_on_neighbor_moves = False

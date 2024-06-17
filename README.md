@@ -8,11 +8,10 @@ You have an infinitely expanding canvas on which you place notes. Each note has 
 
 ## Instalation
 
-Requires neovim to run.
+Requires neovim to run. I you have existing `init.vim` file, it will be sourced.
 
 ```bash
 pipx install infinote-md
-echo source $(ls ~/.local/pipx/venvs/infinote-md/lib64/python3.*/site-packages/infinote/required.vim) >> ~/.config/nvim/init.vim
 ```
 
 

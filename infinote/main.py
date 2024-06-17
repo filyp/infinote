@@ -32,8 +32,10 @@ def main():
     workspace_dir.mkdir(parents=True, exist_ok=True)
     os.chdir(workspace_dir)
 
+    # load nvim, with the required.vim file
+    custom_vimrc = (Path(__file__).parent / "required.vim").resolve()
     nvim = pynvim.attach(
-        "child", argv=["/usr/bin/env", "nvim", "--embed", "--headless"]
+        "child", argv=["/usr/bin/env", "nvim", "--embed", "--headless", "-u", custom_vimrc]
     )
     # text that doesn't fit in window can't be jumped to with Leap (for now)
     nvim.ui_attach(80, 100, True)

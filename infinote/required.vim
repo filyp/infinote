@@ -1,3 +1,7 @@
+let s:init_vim = expand('$HOME/.config/nvim/init.vim')
+if filereadable(s:init_vim)
+  execute 'source ' . s:init_vim
+endif
 
 function! GoToTabWithBuffer(bufnr)
   let l:bufnr = a:bufnr

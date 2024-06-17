@@ -2,9 +2,9 @@ import re
 
 from PySide6.QtGui import QColor, QFont
 
-
-# mod = "A"  # main modifier used for the keybindings
-mod = "C"  # todo change back
+# main modifier used for the keybindings
+mod = "C"  
+# mod = "A"  # move to alt if ctrl conflicts for you
 
 # (note: the order of modifiers must be M-, A-, S-, C-)
 qwerty_keys = {
@@ -13,8 +13,6 @@ qwerty_keys = {
     f"<{mod}-k>": "move up",
     f"<{mod}-h>": "move left",
     f"<{mod}-l>": "move right",
-    # create a child of the current text box, right of it
-    "<A-S-l>": "create child right",
     # zooming
     f"<{mod}-y>": "zoom down",
     f"<{mod}-o>": "zoom up",
@@ -28,8 +26,6 @@ colemak_keys = {
     f"<{mod}-e>": "move up",
     f"<{mod}-m>": "move left",
     f"<{mod}-i>": "move right",
-    # create a child of the current text box, right of it
-    "<A-S-i>": "create child right",
     # zooming
     f"<{mod}-j>": "zoom down",
     f"<{mod}-y>": "zoom up",
@@ -79,16 +75,16 @@ class Config:
     # (note: the order of modifiers must be M-, A-, S-, C-)
     # keys that cannot be used: hjkl yuio men p
     keys = {
+        # Give a comment to the current text
+        f"<{mod}-g>": "create child right",
+        # delete text
         "<C-w>": "delete text",
         # Teleport to any text using leap plugin
         f"<{mod}-t>": "hop",
-        # Center view on the current text box
-        f"<{mod}-c>": "center on current text",
+        # Focus view on the current text box
+        f"<{mod}-f>": "center on current text",
         # zoom in, pushing the current box to the Right
         f"<{mod}-r>": "maximize on current text",
-        # custom C-o andC-i, because normal ones create unwanted buffers
-        # "<C-o>": "jump back",
-        # "<C-i>": "jump forward",
         "<A-Left>": "jump back",
         "<A-Right>": "jump forward",
         # when in bookmarks window, jump to location of bookmark under cursor

@@ -49,8 +49,8 @@ Here `~/cloud/notes/astrophysics` is the workspace name, and `scratchpad` is the
 - `<A-o>` - zoom up
 - `<A-u>` - grow box
 - `<A-i>` - shrink box
-- `<C-o>` - jump back
-- `<C-i>` - jump forward
+- `<A-Left>` - jump back
+- `<A-Right>` - jump forward
 - `,c` - center the view on current box
 - `,m` - maximize the view on current box (zoom out as much as possible, while keeping the current box in view)
 - `,b` - when in bookmarks window, jump to location of bookmark under cursor

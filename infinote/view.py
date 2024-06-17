@@ -158,20 +158,15 @@ class GraphicView(QGraphicsView):
     def jump_to_neighbor(self, direction: str):
         current_text = self.buf_handler.get_current_text()
         match direction:
-            case "down":
-                new = current_text.child_down
             case "right":
                 new = current_text.child_right
-            case "up":
-                new = current_text.parent
-                if new is not None and new.child_down != current_text:
-                    # new is not our up parent
-                    new = None
             case "left":
                 new = current_text.parent
                 if new is not None and new.child_right != current_text:
                     # new is not our left parent
                     new = None
+            case _:
+                new = None
 
         if new is None and Config.allow_disconnected_jumps:
             new = self._get_closest_text(current_text, direction)

@@ -374,7 +374,6 @@ class DraggableText(QGraphicsProxyWidget):
         self.plane_pos = plane_pos
         self.manual_scale = manual_scale
         self.setScale(manual_scale)
-        self.child_down = None
         self.child_right = None
         self.parent = None
         self.pin_pos = None
@@ -443,33 +442,19 @@ class DraggableText(QGraphicsProxyWidget):
         height = min(self._calculate_height(), height)
         self.insides_renderer.text_box.setFixedHeight(height)
         self._height = height
-
-        self.place_down_children()
         self.place_right_children()
 
     def detach_parent(self):
         # detach from parent
         if self.parent is not None:
-            if self.parent.child_down == self:
-                self.parent.child_down = None
             elif self.parent.child_right == self:
                 self.parent.child_right = None
             self.parent = None
 
     def detach_children(self):
-        if self.child_down is not None:
-            self.child_down.parent = None
-            self.child_down = None
         if self.child_right is not None:
             self.child_right.parent = None
             self.child_right = None
-
-    def place_down_children(self):
-        if self.child_down is not None:
-            height = self.get_plane_height()
-            gap = Config.text_gap * self.get_plane_scale() / self.manual_scale
-            self.child_down.plane_pos = self.plane_pos + QPointF(0, height + gap)
-            self.child_down.reposition()
 
     def place_right_children(self):
         if self.child_right is not None:

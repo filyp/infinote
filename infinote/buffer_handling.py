@@ -19,7 +19,6 @@ class BufferHandler:
         self.last_file_nums = defaultdict(lambda: 0)
         self.savedir_hues = {}
         self.to_redraw = set()
-        self.catch_child = None
 
         # start in insert mode if not in vim mode
         if not Config.vim_mode:
@@ -133,7 +132,7 @@ class BufferHandler:
     def get_current_text(self):
         return self.buf_num_to_text.get(self.nvim.current.buffer.number)
 
-    def create_child(self, side):
+    def create_child(self):
         current_text = self.buf_num_to_text.get(self.nvim.current.buffer.number)
 
         if current_text.filename is None:
@@ -141,20 +140,11 @@ class BufferHandler:
             self.view.msg("can't create children for non-persistent buffers")
             return
 
-        if side == "right":
-            if current_text.child_right is not None:
-                self.view.msg("right child already exists")
-                return
-            child = self.create_text(self.view.current_folder, (0, 0))
-            current_text.child_right = child
-        elif side == "down":
-            if current_text.child_down is not None:
-                self.view.msg("down child already exists")
-                return
-            child = self.create_text(self.view.current_folder, (0, 0))
-            current_text.child_down = child
-        else:
-            raise ValueError("side must be 'right' or 'down'")
+        if current_text.child_right is not None:
+            self.view.msg("right child already exists")
+            return
+        child = self.create_text(self.view.current_folder, (0, 0))
+        current_text.child_right = child
 
         child.parent = current_text
         child.parent.reposition()
@@ -187,27 +177,6 @@ class BufferHandler:
         # if is_buf_empty(old_buf) or old_buf[:] == [Config.input_on_creation]:
         #     self.delete_buf(old_buf)
 
-    def reattach_text(self, parent_text, child_text):
-        child_text.detach_parent()
-
-        # we have to check we're not creating a cycle
-        parents_root = parent_text
-        while parents_root.parent is not None:
-            parents_root = parents_root.parent
-        childs_root = child_text
-        while childs_root.parent is not None:
-            childs_root = childs_root.parent
-        if childs_root == parents_root:
-            self.view.msg("can't reattach - we would create a cycle")
-            return
-
-        if self.catch_child == "down":
-            parent_text.child_down = child_text
-            child_text.parent = parent_text
-        elif self.catch_child == "right":
-            parent_text.child_right = child_text
-            child_text.parent = parent_text
-
     def _sanitize_buffers(self):
         current_buffer, wins = self.nvim.api.call_atomic(
             [
@@ -215,13 +184,6 @@ class BufferHandler:
                 ["nvim_tabpage_list_wins", [self.nvim.current.tabpage]],
             ]
         )[0]
-
-        # # delete last buf if it's empty and unfocused
-        # if self.jumplist[-1] != current_buffer.number:
-        #     _last_buf = self.nvim.buffers[self.jumplist[-1]]
-        #     if is_buf_empty(_last_buf) or _last_buf[:] == [Config.input_on_creation]:
-        #         self.delete_buf(_last_buf)
-        #     current_buffer = self.nvim.current.buffer
 
         # make sure current tab has the current buffer
         # get the num of wins in this tab
@@ -296,13 +258,6 @@ class BufferHandler:
 
         # (note: sanitize_buffers can change the current buffer)
         current_buf = self._sanitize_buffers()
-
-        # catch children
-        if self.jumplist[-1] != current_buf.number and self.catch_child is not None:
-            parent_text = self.buf_num_to_text[self.jumplist[-1]]
-            child_text = self.buf_num_to_text[current_buf.number]
-            self.reattach_text(parent_text, child_text)
-            self.catch_child = None
 
         # grow jumplist
         if (

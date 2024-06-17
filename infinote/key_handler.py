@@ -185,10 +185,8 @@ class KeyHandler:
             case "maximize on current text":
                 current_text = buf_handler.get_current_text()
                 view.global_scale = view.get_scale_maximized_on_text(current_text)
-            case "create child down":
-                buf_handler.create_child("down")
             case "create child right":
-                buf_handler.create_child("right")
+                buf_handler.create_child()
             case "move down":
                 view.jump_to_neighbor("down")
             case "move up":
@@ -223,12 +221,6 @@ class KeyHandler:
             case "jump forward":
                 buf_handler.jump_forward()
                 view.zoom_on_text(buf_handler.get_current_text())
-            case "catch child down":
-                buf_handler.catch_child = "down"
-                view.msg("catching child down")
-            case "catch child right":
-                buf_handler.catch_child = "right"
-                view.msg("catching child right")
             case "toggle editor":
                 if view.show_editor:
                     view.show_editor = False

@@ -44,9 +44,7 @@ Here `~/cloud/notes/astrophysics` is the workspace name, and `scratchpad` is the
 - `<A-k>` - move to neighbor up
 - `<A-h>` - move to neighbor left
 - `<A-l>` - move to neighbor right
-- `<M-A-j>` - make a new child of the current text box, to the bottom
 - `<M-A-l>` - make a new child of the current text box, to the right
-- `<A-S-j>` - catch a child and insert it to the bottom (will hang until you click or move to the box to catch)
 - `<A-S-l>` - catch a child and insert it to the right (will hang until you click or move to the box to catch)
 - `<A-y>` - zoom down
 - `<A-o>` - zoom up

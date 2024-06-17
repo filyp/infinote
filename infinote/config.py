@@ -13,12 +13,8 @@ qwerty_keys = {
     f"<{mod}-k>": "move up",
     f"<{mod}-h>": "move left",
     f"<{mod}-l>": "move right",
-    # create a child of the current text box, down of it
-    "<A-S-j>": "create child down",
     # create a child of the current text box, right of it
     "<A-S-l>": "create child right",
-    # catch a child and insert it down
-    "<M-A-j>": "catch child down",
     # catch a child and insert it right
     "<M-A-l>": "catch child right",
     # zooming
@@ -34,12 +30,8 @@ colemak_keys = {
     f"<{mod}-e>": "move up",
     f"<{mod}-m>": "move left",
     f"<{mod}-i>": "move right",
-    # create a child of the current text box, down of it
-    "<A-S-n>": "create child down",
     # create a child of the current text box, right of it
     "<A-S-i>": "create child right",
-    # catch a child and insert it down
-    "<M-A-n>": "catch child down",
     # catch a child and insert it right
     "<M-A-i>": "catch child right",
     # zooming

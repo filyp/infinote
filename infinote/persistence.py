@@ -46,7 +46,7 @@ def load_scene(buf_handler: BufferHandler, group_dir: Path):
     group_dir.mkdir(exist_ok=True)
     meta.update(json.loads(meta_path.read_text()))
     subdirs = [d for d in top_dir.iterdir() if d.is_dir()]
-    print(f"subdirs: {subdirs}")
+    print(f"subdirs: {[dir.name for dir in subdirs]}")
     for subdir in subdirs:
         # load dir color
         assert subdir.name in meta, f"alien folder: {subdir}"

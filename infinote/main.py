@@ -1,3 +1,5 @@
+import argparse
+import datetime
 import os
 import sys
 from pathlib import Path
@@ -7,6 +9,19 @@ from PySide6.QtWidgets import QApplication, QMainWindow
 
 from infinote.persistence import load_scene, save_scene
 from infinote.view import GraphicView
+
+parser = argparse.ArgumentParser(description="Infinote: Feel the spatial freedom in your notes")
+parser.add_argument("workspace", type=Path, help="Directory where the workspace is saved")
+# make the group argument optional
+parser.add_argument(
+    "group",
+    type=str,
+    nargs="?",
+    help="Name of the group inside the workspace to use",
+    # the default is date in yy.MM format
+    default=datetime.datetime.now().strftime("%y.%m"),
+)
+args = parser.parse_args()
 
 
 class MainWindow(QMainWindow):
@@ -23,12 +38,14 @@ class MainWindow(QMainWindow):
 
 
 def main():
-    assert len(sys.argv) == 2, "usage: infinote <savedir>"
-    group_dir = Path(sys.argv[1]).resolve()
-    workspace_dir = group_dir.parent
+    config_path = Path(__file__).parent.resolve() / "config.py"
+    print(f"using config: {config_path.as_posix()}")
+
+    workspace_dir = Path(args.workspace).resolve()
+    group_dir = (workspace_dir / args.group)
+
     # change working directory to the workspace directory
     # so that nvim can find the bookmark file
-    
     workspace_dir.mkdir(parents=True, exist_ok=True)
     os.chdir(workspace_dir)
 

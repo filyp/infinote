@@ -1,5 +1,7 @@
+from dataclasses import dataclass
 from pathlib import Path
 import re
+from typing import Tuple
 
 from PySide6.QtCore import QPointF, Qt
 from PySide6.QtGui import (
@@ -361,25 +363,41 @@ class TextboxInsidesRenderer:
         self._border_glowing = state
 
 
+@dataclass
+class BoxInfo:
+    plane_pos: Tuple[float, float] = Config.initial_position
+    manual_scale: float = Config.starting_box_scale
+    scale_rel_to_parent: float = Config.child_relative_scale
+    pos_rel_to_parent: Tuple[float, float] | None = None
+    parent_filename: str | None = None
+
+
 class DraggableText(QGraphicsProxyWidget):
     # it has position related functions
-    def __init__(self, nvim, buffer_handle, filename, view, plane_pos, manual_scale, all_parents):
+    def __init__(self, box_info, nvim, buffer_handle, filename, view, all_parents):
         super().__init__()
-
-        self.autoshrink = Config.autoshrink
 
         # note that num doesn't need to be the same as buffer_handle.number
         self.buffer = buffer_handle
         self.filename = filename
         self.view = view
-        self.plane_pos = plane_pos
-        self.manual_scale = manual_scale
         self.all_parents = all_parents
-        self.setScale(manual_scale)
-        self.pin_pos = None
+        self.setScale(box_info.manual_scale)
+        self._pin_pos = None
         self.folds = []
         self.sign_lines = []
         self._height = 0
+
+        self.plane_pos = QPointF(*box_info.plane_pos)
+        self.manual_scale = box_info.manual_scale
+        # children specific: if this box is a child, only those have effect, and not the two above
+        self.scale_rel_to_parent = box_info.scale_rel_to_parent
+        # if kept at none, it will just be displayed to the right of the parent
+        # otherwise, it's a tuple with x and y relative position to the parent
+        self.pos_rel_to_parent = (
+            QPointF(*box_info.pos_rel_to_parent) if box_info.pos_rel_to_parent else None
+        )
+        self.parent_filename = box_info.parent_filename
 
         # optionally, send some input on creation
         if is_buf_empty(self.buffer) and Config.input_on_creation:
@@ -411,7 +429,7 @@ class DraggableText(QGraphicsProxyWidget):
 
         # drag around
         mouse_end = QPointF(event.screenPos() / self.view.global_scale)
-        displacement = self.get_plane_scale() * self.pin_pos
+        displacement = self.get_plane_scale() * self._pin_pos
         self.plane_pos = mouse_end - displacement
 
         self.all_parents[self] = None
@@ -419,7 +437,11 @@ class DraggableText(QGraphicsProxyWidget):
         # self.view.dummy.setFocus()
 
     def get_plane_scale(self):
-        if self.autoshrink:
+        if self.parent_filename is not None:
+            parent = self.all_parents[self]
+            # todo the fact that it's recomputed may be inefficient for large trees
+            return parent.get_plane_scale() * self.scale_rel_to_parent
+        elif Config.autoshrink:
             # euclidean magniture of plane_pos
             distance = (self.plane_pos.x() ** 2 + self.plane_pos.y() ** 2) ** 0.5
             distance_scale = distance / Config._initial_distance
@@ -431,7 +453,24 @@ class DraggableText(QGraphicsProxyWidget):
         global_scale = self.view.global_scale
         self.setScale(self.get_plane_scale() * global_scale)
         self.setPos(self.plane_pos * global_scale)
+        self.update_height()
 
+        # place children
+        children = self.all_parents.inverted().getlist(self)
+        width = self.get_plane_width()
+        gap = Config.text_gap * self.get_plane_scale() / self.manual_scale
+        height_acc = 0
+        for child in children:
+            child.plane_pos = self.plane_pos + QPointF(width + gap, height_acc)
+            child.reposition()
+            height_acc += child.get_plane_height() + gap
+
+    def _calculate_height(self):
+        height = self.insides_renderer.text_box.document().size().height() + 2
+        height = min(height, Config.text_max_height)
+        return height
+
+    def update_height(self):
         # set height
         # for some reason it needs to be done twice, to prevent a glitch
         # only the smaller of those two heights is valid
@@ -441,25 +480,11 @@ class DraggableText(QGraphicsProxyWidget):
         self.insides_renderer.text_box.setFixedHeight(height)
         self._height = height
 
-        # place children
-        children = self.all_parents.inverted().getlist(self)
-        width = self.get_plane_width()
-        gap = Config.text_gap * self.get_plane_scale() / self.manual_scale
-        for child in children:
-            # todo stack height
-            child.plane_pos = self.plane_pos + QPointF(width + gap, 0)
-            child.reposition()
-
-    def _calculate_height(self):
-        height = self.insides_renderer.text_box.document().size().height() + 2
-        height = min(height, Config.text_max_height)
-        return height
-
     def get_plane_width(self):
         return self.get_plane_scale() * Config.text_width
 
     def get_plane_height(self):
-        # this needs to be called only after this node's reposition
+        # this needs to be called after this node's reposition
         return self.get_plane_scale() * self._height
 
     def get_center(self):
@@ -481,6 +506,11 @@ class DraggableText(QGraphicsProxyWidget):
         nvim.api.set_current_buf(self.buffer.number)
         # save it
         nvim.command("w")
+    
+    def get_rel_filename(self):
+        if self.filename is None:
+            return None
+        return Path(self.filename).relative_to(self.view.workspace_dir).as_posix()
 
 
 class EditorBox(QGraphicsProxyWidget):

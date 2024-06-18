@@ -47,6 +47,8 @@ class Config:
     initial_position = (500, 40)
     text_gap = 6
     starting_box_scale = 0.75
+    # how much smaller the child boxes are compared to their parent on their creation
+    child_relative_scale = 0.8
 
     # closer to 1 is slower (must be larger than 1)
     scroll_speed = 1.0005

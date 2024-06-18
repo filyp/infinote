@@ -2,11 +2,11 @@ from collections import defaultdict, deque
 from pathlib import Path
 from typing import List
 
-from PySide6.QtCore import QPointF
 from boltons.dictutils import OrderedMultiDict
+from PySide6.QtCore import QPointF
 
 from infinote.config import Config
-from infinote.text_object import DraggableText, EditorBox, is_buf_empty
+from infinote.text_object import BoxInfo, DraggableText, EditorBox, is_buf_empty
 
 
 class BufferHandler:
@@ -29,10 +29,7 @@ class BufferHandler:
     def get_num_unbound_buffers(self):
         return len(self.nvim.buffers) - len(self.buf_num_to_text)
 
-    def open_filename(self, pos, manual_scale, filename=None, buffer=None):
-        if isinstance(pos, (tuple, list)):
-            pos = QPointF(*pos)
-
+    def open_filename(self, box_info, filename=None, buffer=None):
         if buffer is None and filename is not None:
             # no buffer provided, so open the one with the given filename
             num_of_texts = len(self.buf_num_to_text)
@@ -52,20 +49,18 @@ class BufferHandler:
         else:
             raise ValueError("either buffer or filename must be provided")
 
-        text = DraggableText(
-            self.nvim, buffer, filename, self.view, pos, manual_scale, self.parents
-        )
+        text = DraggableText(box_info, self.nvim, buffer, filename, self.view, self.parents)
         self.view.scene().addItem(text)
 
         self.buf_num_to_text[buffer.number] = text
         return text
 
-    def create_text(self, savedir, pos, manual_scale=Config.starting_box_scale):
+    def create_text(self, savedir, box_info):
         num_of_texts = len(self.buf_num_to_text)
         if num_of_texts == len(self.nvim.buffers) or num_of_texts == 0:
             self.last_file_nums[savedir] += 1
             filename = f"{savedir}/{self.last_file_nums[savedir]}.md"
-            return self.open_filename(pos, manual_scale, filename)
+            return self.open_filename(box_info, filename)
 
         # some buffer was created some other way than calling create_text,
         # so mark it to not be saved
@@ -74,7 +69,7 @@ class BufferHandler:
         # get the unused buffer
         for buf in self.nvim.buffers:
             if buf.number not in self.buf_num_to_text:
-                return self.open_filename(pos, manual_scale, filename, buf)
+                return self.open_filename(box_info, filename, buf)
         raise RuntimeError("no unused buffer found")
 
     def jump_to_buffer(self, buf_num):
@@ -143,9 +138,12 @@ class BufferHandler:
             self.view.msg("can't create children for non-persistent buffers")
             return
 
-        child = self.create_text(self.view.current_folder, (0, 0))
+        child = self.create_text(
+            self.view.current_folder, BoxInfo(parent_filename=current_text.get_rel_filename())
+        )
         self.parents[child] = current_text
-        self.parents[child].reposition()
+
+        current_text.reposition()
 
         if Config.track_jumps_on_neighbor_moves:
             self.view.track_jump(current_text, child)

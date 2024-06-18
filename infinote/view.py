@@ -35,6 +35,7 @@ class GraphicView(QGraphicsView):
         self.key_handler = KeyHandler(nvim, self)
         self.buf_handler = BufferHandler(nvim, self)
         self.current_folder = main_subdir
+        self.workspace_dir = main_subdir.parent
         self.timer = None
         self._timer_last_update = None
 
@@ -100,7 +101,7 @@ class GraphicView(QGraphicsView):
 
             # pin the click position, in case of dragging
             click_pos = event.screenPos() / self.global_scale
-            item.pin_pos = (click_pos - item.plane_pos) / item.get_plane_scale()
+            item._pin_pos = (click_pos - item.plane_pos) / item.get_plane_scale()
             # pass if event is drag
             super().mousePressEvent(event)
         elif isinstance(item, EditorBox):

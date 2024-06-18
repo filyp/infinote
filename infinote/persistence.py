@@ -7,6 +7,7 @@ from pynvim import Nvim
 
 from infinote.buffer_handling import BufferHandler
 from infinote.config import Config
+from infinote.text_object import BoxInfo
 
 
 def _name_to_hue(name: str):
@@ -39,7 +40,7 @@ def load_scene(buf_handler: BufferHandler, group_dir: Path):
         # create the main subdir
         group_dir.mkdir(exist_ok=True)
         # create one text
-        buf_handler.create_text(group_dir, Config.initial_position)
+        buf_handler.create_text(group_dir, BoxInfo())
         return
 
     # create the main subdir
@@ -56,21 +57,17 @@ def load_scene(buf_handler: BufferHandler, group_dir: Path):
         files = [f for f in subdir.iterdir() if f.suffix == ".md"]
         for full_filename in files:
             rel_filename = full_filename.relative_to(top_dir).as_posix()
-            assert (
-                full_filename.stem.isnumeric()
-            ), f"names must be integers: {rel_filename}"
+            assert full_filename.stem.isnumeric(), f"names must be integers: {rel_filename}"
             assert rel_filename in meta, f"alien file: {rel_filename}"
-            info = meta[rel_filename]
+            box_info = BoxInfo(**meta[rel_filename])
 
             if meta.get("active_text") and rel_filename == meta["active_text"]:
-                last_info = info
+                last_box_info = box_info
                 last_filename = full_filename
                 continue
 
             # create text
-            text = buf_handler.open_filename(
-                info["plane_pos"], info["manual_scale"], full_filename.as_posix()
-            )
+            text = buf_handler.open_filename(box_info, full_filename.as_posix())
             filename_to_text[rel_filename] = text
 
         # prepare the next file number
@@ -79,54 +76,47 @@ def load_scene(buf_handler: BufferHandler, group_dir: Path):
 
     # load the last active text
     if meta.get("active_text"):
-        text = buf_handler.open_filename(
-            last_info["plane_pos"],
-            last_info["manual_scale"],
-            last_filename.as_posix(),
-        )
+        text = buf_handler.open_filename(last_box_info, last_filename.as_posix())
         rel_filename = last_filename.relative_to(top_dir).as_posix()
         filename_to_text[rel_filename] = text
 
     # connect them
     for rel_filename, text in filename_to_text.items():
-        info = meta[rel_filename]
-        buf_handler.parents[text] = filename_to_text.get(info["parent"])
+        box_info = meta[rel_filename]
+        buf_handler.parents[text] = filename_to_text.get(box_info["parent_filename"])
 
     print(f"loaded {len(filename_to_text)} texts")
 
 
 def save_scene(buf_handler: BufferHandler, nvim: Nvim, group_dir: Path):
-    top_dir = group_dir.parent
+    workspace_dir = group_dir.parent
     # record text metadata
     meta = {}
 
-    def get_rel_filename(text):
-        return (
-            Path(text.filename).relative_to(top_dir).as_posix()
-            if text is not None and text.filename is not None
-            else None
-        )
 
     for text in buf_handler.get_texts():
         if text.filename is None:
             # this buffer was not created by this program, so don't save it
             continue
-        savedir = Path(text.filename).parent
-        rel_filename = Path(text.filename).relative_to(top_dir).as_posix()
+        rel_filename = Path(text.filename).relative_to(workspace_dir).as_posix()
         meta[rel_filename] = dict(
             plane_pos=tuple(text.plane_pos.toTuple()),
             manual_scale=text.manual_scale,
-            parent=get_rel_filename(buf_handler.parents.get(text)),
+            scale_rel_to_parent=text.scale_rel_to_parent,
+            pos_rel_to_parent=(
+                tuple(text.pos_rel_to_parent.toTuple()) if text.pos_rel_to_parent else None
+            ),
+            parent_filename=text.parent_filename,
         )
 
     # record other data
     for subdir, hue in buf_handler.savedir_hues.items():
         meta[subdir.name] = dict(hue=hue)
 
-    meta["active_text"] = get_rel_filename(buf_handler.get_current_text())
+    meta["active_text"] = buf_handler.get_current_text().get_rel_filename()
 
     # save metadata json
-    meta_path = top_dir / "meta.json"
+    meta_path = workspace_dir / "meta.json"
     meta_path.write_text(json.dumps(meta, indent=4))
 
     #########################################

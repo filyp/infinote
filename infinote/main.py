@@ -61,7 +61,7 @@ def main():
     app = QApplication(sys.argv)
     view = GraphicView(nvim, group_dir)
     buf_handler = view.buf_handler
-    w = MainWindow(view)
+    w = MainWindow(view)  # NOSONAR
 
     # make the cursor non-blinking
     app.setCursorFlashTime(0)
@@ -76,7 +76,7 @@ def main():
     buf_handler.update_all_texts()
 
     exit_code = app.exec()
-    save_scene(buf_handler, nvim, group_dir)
+    save_scene(buf_handler, nvim, workspace_dir)
     sys.exit(exit_code)
 
 

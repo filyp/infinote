@@ -187,6 +187,8 @@ class TextboxInsidesRenderer:
         # set marks text (mainly for the leap plugin)
         mark_positions = []
         for _, y, x, details in extmarks:
+            if "virt_text" not in details:
+                continue
             virt_text = details["virt_text"]
             assert len(virt_text) == 1, virt_text
             char, type_ = virt_text[0]
@@ -528,6 +530,20 @@ class DraggableText(QGraphicsProxyWidget):
         filepath = Path(self.filename).resolve()
         info_path = filepath.parent / ".box_info" / f"{filepath.stem}.json"
         info_path.write_text(json.dumps(info, indent=4))
+
+    def load_info(self):
+        if self.filename is None:
+            return
+        filepath = Path(self.filename).resolve()
+        info_path = filepath.parent / ".box_info" / f"{filepath.stem}.json"
+        info = json.loads(info_path.read_text())
+
+        self.plane_pos = QPointF(*info["plane_pos"])
+        self.manual_scale = info["manual_scale"]
+        self.scale_rel_to_parent = info["scale_rel_to_parent"]
+        if info["pos_rel_to_parent"] is not None:
+            self.pos_rel_to_parent = QPointF(*info["pos_rel_to_parent"])
+        self.parent_filename = info["parent_filename"]
 
 
 

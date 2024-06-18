@@ -20,10 +20,15 @@ def _name_to_hue(name: str):
     return hue
 
 
+def get_box_info(full_filename: Path):
+    info_path = full_filename.parent / ".box_info" / f"{full_filename.stem}.json"  # NOSONAR
+    info = json.loads(info_path.read_text())
+    return BoxInfo(**info)
+
+
 def load_scene(buf_handler: BufferHandler, group_dir: Path):
-    filename_to_text = {}
-    top_dir = group_dir.parent
-    top_dir.mkdir(parents=True, exist_ok=True)
+    workspace_dir = group_dir.parent
+    workspace_dir.mkdir(parents=True, exist_ok=True)
     meta = {}
 
     if not group_dir.exists():
@@ -32,11 +37,11 @@ def load_scene(buf_handler: BufferHandler, group_dir: Path):
         meta[group_dir.name] = dict(hue=hue)
         buf_handler.savedir_hues[group_dir] = hue
 
-    meta_path = top_dir / "meta.json"
+    meta_path = workspace_dir / "meta.json"
     if not meta_path.exists():
-        print(f"opening a new workspace in {top_dir}")
+        print(f"opening a new workspace in {workspace_dir}")
         # if there is no meta, top_dir should be empty
-        assert not any(top_dir.iterdir()), f"workdir_dir not empty: {top_dir}"
+        assert not any(workspace_dir.iterdir()), f"workspace_dir not empty: {workspace_dir}"
         # create the main subdir
         group_dir.mkdir(exist_ok=True)
         (group_dir / ".box_info").mkdir(exist_ok=True)
@@ -48,8 +53,9 @@ def load_scene(buf_handler: BufferHandler, group_dir: Path):
     group_dir.mkdir(exist_ok=True)
     (group_dir / ".box_info").mkdir(exist_ok=True)
     meta.update(json.loads(meta_path.read_text()))
-    subdirs = [d for d in top_dir.iterdir() if d.is_dir()]
+    subdirs = [d for d in workspace_dir.iterdir() if d.is_dir()]
     print(f"subdirs: {[dir.name for dir in subdirs]}")
+    filename_to_text = {}
     for subdir in subdirs:
         # load dir color
         assert subdir.name in meta, f"alien folder: {subdir}"
@@ -58,73 +64,44 @@ def load_scene(buf_handler: BufferHandler, group_dir: Path):
         # load files into buffers
         files = [f for f in subdir.iterdir() if f.suffix == ".md"]
         for full_filename in files:
-            rel_filename = full_filename.relative_to(top_dir).as_posix()
+            rel_filename = full_filename.relative_to(workspace_dir).as_posix()
             assert full_filename.stem.isnumeric(), f"names must be integers: {rel_filename}"
-            assert rel_filename in meta, f"alien file: {rel_filename}"
-            box_info = BoxInfo(**meta[rel_filename])
-
-            if meta.get("active_text") and rel_filename == meta["active_text"]:
-                last_box_info = box_info
-                last_filename = full_filename
-                continue
+            box_info = get_box_info(full_filename)
 
             # create text
             text = buf_handler.open_filename(box_info, full_filename.as_posix())
-            filename_to_text[rel_filename] = text
+            filename_to_text[full_filename] = text
 
         # prepare the next file number
         max_filenum = max(int(f.stem) for f in files) if files else 0
         buf_handler.last_file_nums[subdir] = max_filenum
 
-    # load the last active text
-    if meta.get("active_text"):
-        text = buf_handler.open_filename(last_box_info, last_filename.as_posix())
-        rel_filename = last_filename.relative_to(top_dir).as_posix()
-        filename_to_text[rel_filename] = text
+    # select the last active text
+    last_active_text = meta.get("active_text")
+    if last_active_text is not None:
+        buf_handler.jump_to_file(last_active_text)
 
     # connect them
-    for rel_filename, text in filename_to_text.items():
-        box_info = meta[rel_filename]
-        buf_handler.parents[text] = filename_to_text.get(box_info["parent_filename"])
+    for full_filename, text in filename_to_text.items():
+        box_info = get_box_info(full_filename)
+        if box_info.parent_filename:
+            parent_full_filename = workspace_dir / box_info.parent_filename
+            buf_handler.parents[text] = filename_to_text.get(parent_full_filename)
 
     print(f"loaded {len(filename_to_text)} texts")
 
 
-def save_scene(buf_handler: BufferHandler, nvim: Nvim, group_dir: Path):
-    workspace_dir = group_dir.parent
+def save_scene(buf_handler: BufferHandler, nvim: Nvim, workspace_dir: Path):
+    # save metadata json
     meta = {}
-
-    # todo this will be removed
-    for text in buf_handler.get_texts():
-        if text.filename is None:
-            # this buffer was not created by this program, so don't save it
-            continue
-        rel_filename = Path(text.filename).relative_to(workspace_dir).as_posix()
-        meta[rel_filename] = dict(
-            plane_pos=tuple(text.plane_pos.toTuple()),
-            manual_scale=text.manual_scale,
-            scale_rel_to_parent=text.scale_rel_to_parent,
-            pos_rel_to_parent=(
-                tuple(text.pos_rel_to_parent.toTuple()) if text.pos_rel_to_parent else None
-            ),
-            parent_filename=text.parent_filename,
-        )
-    
-    for text in buf_handler.get_texts():
-        text.persist_info()
-    
-
-    # record other data
     for subdir, hue in buf_handler.savedir_hues.items():
         meta[subdir.name] = dict(hue=hue)
-
     meta["active_text"] = buf_handler.get_current_text().get_rel_filename()
-
-    # save metadata json
     meta_path = workspace_dir / "meta.json"
     meta_path.write_text(json.dumps(meta, indent=4))
 
-    #########################################
     # save each text
+    for text in buf_handler.get_texts():
+        text.persist_info()
     for text in buf_handler.get_texts():
         text.save(nvim)

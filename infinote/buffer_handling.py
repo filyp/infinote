@@ -272,19 +272,8 @@ class BufferHandler:
         to_redraw = self.to_redraw & set(all_bufs)
         self.to_redraw = set()
 
-        # note that in principle other buffers could have marks
-        # but when it comes to leap marks, they are only present iff current buffer
-        # has some too
-        get_extmarks = [] != self.nvim.api.buf_get_extmarks(
-            current_buf.number, -1, (0, 0), (-1, -1), {}
-        )
-        # potential simplification would be to always get info from all bufs
-        # but that may have overhead when there is some huge num of bufs?
-
         # get batched info from nvim about potentially changed buffers
-        cur_buf_info, all_lines, all_extmarks = self._batched_get_nvim_info(
-            all_bufs if get_extmarks else list(to_redraw)
-        )
+        cur_buf_info, all_lines, all_extmarks = self._batched_get_nvim_info(all_bufs)
         for buf_num, extmarks in all_extmarks.items():
             if extmarks != []:
                 to_redraw.add(buf_num)

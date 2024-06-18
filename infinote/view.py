@@ -13,11 +13,11 @@ from PySide6.QtWidgets import (
 from infinote.buffer_handling import BufferHandler
 from infinote.config import Config
 from infinote.key_handler import KeyHandler
-from infinote.text_object import DraggableText, EditorBox
+from infinote.text_object import BoxInfo, DraggableText, EditorBox
 
 
 def _exit_visual_mode(nvim):
-    mode = nvim.api.get_mode()["mode"] 
+    mode = nvim.api.get_mode()["mode"]
     if mode == "v" or mode == "V" or mode == "\x16":
         nvim.input("<Esc>")
 
@@ -113,7 +113,8 @@ class GraphicView(QGraphicsView):
         else:
             # clicked bg, so create a new text
             item = self.buf_handler.create_text(
-                self.current_folder, event.screenPos() / self.global_scale
+                self.current_folder,
+                BoxInfo(plane_pos=(event.screenPos() / self.global_scale).toTuple()),
             )
             self.buf_handler.update_all_texts()
             # super().mousePressEvent(event)
@@ -249,7 +250,11 @@ class GraphicView(QGraphicsView):
 
         # resize current text box
         text = self.buf_handler.get_current_text()
-        text.manual_scale *= Config.key_zoom_speed ** (time_diff * sign)
+        delta = Config.key_zoom_speed ** (time_diff * sign)
+        if text.parent_filename is None:
+            text.manual_scale *= delta
+        else:
+            text.scale_rel_to_parent *= delta
         text.reposition()
 
     def _get_closest_text(self, current_text, direction):

@@ -57,10 +57,9 @@ class KeyHandler:
         self.external_command_mode = False
         self.search_mode = False
         self.backward_search_mode = False
-        self._leader_key_last_pressed = False
 
     def _absorb_key_into_command_line(self, text, event):
-        if text == "<Esc>":
+        if text == "<Esc>":  # NOSONAR
             if self.external_command_mode:
                 self.nvim.input("<Esc>")
             self.command_mode = False
@@ -98,9 +97,22 @@ class KeyHandler:
             self.handle_custom_command(text, mode)
             return
 
-        if not Config.vim_mode and mode == "i" and text == "<Esc>":
-            # don't allow leaving insert mode
-            return
+        if not Config.vim_mode: 
+            if mode == "i" and text == "<Esc>":
+                # don't allow leaving insert mode
+                return
+            if mode == "v" or mode == "V":
+                if text == "<BS>":
+                    # delete text
+                    self.nvim.input("c")
+                if text == "<Esc>":
+                    # leave visual mode
+                    self.nvim.input("<Esc>")
+                else:
+                    # replace text
+                    self.nvim.input("c" + text)
+                return
+
         if text == "<C-i>" or text == "<C-o>":
             # don't allow this, because they create unwanted buffers
             return
@@ -111,14 +123,8 @@ class KeyHandler:
             return
         # if we're here, we're in normal or command mode
 
-        # handle custom commands
-        # note: this functionality will probably be removed
-        if self._leader_key_last_pressed:
-            self._leader_key_last_pressed = False
-            self.handle_custom_command(Config.leader_key + text, mode)
-            return
-
         # monitor command and search input
+        # todo simplify
         if (
             self.command_mode
             or self.external_command_mode
@@ -130,9 +136,6 @@ class KeyHandler:
             return
 
         match text:
-            case Config.leader_key:
-                self._leader_key_last_pressed = True
-
             # handle entering command line
             case "<S-:>" | ":":
                 self.command_mode = True
@@ -140,7 +143,6 @@ class KeyHandler:
                 self.search_mode = True
             case "<S-/>" | "<S-?>" | "?":
                 self.backward_search_mode = True
-
             case _:
                 # send that key
                 self.nvim.input(text)
@@ -157,7 +159,7 @@ class KeyHandler:
         else:
             return ""
 
-    def handle_custom_command(self, key_combo, mode):
+    def handle_custom_command(self, key_combo, mode):  # NOSONAR
         if key_combo not in Config.keys:
             return
         command = Config.keys[key_combo]
@@ -174,9 +176,7 @@ class KeyHandler:
             case "bookmark jump":
                 if mode == "i":
                     self.nvim.input("<Esc>")
-                cmd = (
-                    '<Home>"fyt|f|<Right>"lyiw:buffer<Space><C-r>f<Enter>:<C-r>l<Enter>'
-                )
+                cmd = '<Home>"fyt|f|<Right>"lyiw:buffer<Space><C-r>f<Enter>:<C-r>l<Enter>'
                 self.nvim.input(cmd)
                 view.zoom_on_text(buf_handler.get_current_text())
             case "center on current text":

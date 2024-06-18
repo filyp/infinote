@@ -71,9 +71,6 @@ class Config:
     editor_width_ratio = 1 / 3  # part of screen width for the editor
     sign_color = QColor.fromHsl(289, 100, 38)
 
-    # note: in the future leader_key will probably be removed to simplify
-    leader_key = ","
-    # supported single key codes, and single key codes preceded with leader key
     # (note: the order of modifiers must be M-, A-, S-, C-)
     # keys that cannot be used: hjkl yuio men p
     keys = {

@@ -445,6 +445,7 @@ class DraggableText(QGraphicsProxyWidget, BoxInfo):
         self.plane_pos_vect = mouse_end - displacement
 
         self.all_parents[self] = None
+        self.parent_filename = None
         self.reposition()
         # self.view.dummy.setFocus()
 

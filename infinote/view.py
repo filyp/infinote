@@ -101,7 +101,7 @@ class GraphicView(QGraphicsView):
 
             # pin the click position, in case of dragging
             click_pos = event.screenPos() / self.global_scale
-            item._pin_pos = (click_pos - item.plane_pos) / item.get_plane_scale()
+            item._pin_pos = (click_pos - item.plane_pos_vect) / item.get_plane_scale()
             # pass if event is drag
             super().mousePressEvent(event)
         elif isinstance(item, EditorBox):
@@ -173,9 +173,9 @@ class GraphicView(QGraphicsView):
 
     def track_jump(self, old, new):
         # update global scale to track the movement
-        old_pos = old.plane_pos
+        old_pos = old.plane_pos_vect
         old_dist = (old_pos.x() ** 2 + old_pos.y() ** 2) ** 0.5
-        new_pos = new.plane_pos
+        new_pos = new.plane_pos_vect
         new_dist = (new_pos.x() ** 2 + new_pos.y() ** 2) ** 0.5
 
         self.global_scale *= old_dist / new_dist
@@ -188,26 +188,24 @@ class GraphicView(QGraphicsView):
         self.global_scale = max(smallest_scale, self.global_scale)
 
     def get_scale_centered_on_text(self, text):
-        x = text.plane_pos.x()
-        y = text.plane_pos.y()
         window_width = self.screen().size().width()
         window_height = self.screen().size().height()
         if self.show_editor:
             window_width *= 1 - Config.editor_width_ratio
 
+        x, y = text.plane_pos
         center_scale_x = window_width / (x * 2 + text.get_plane_width())
         center_scale_y = window_height / (y * 2 + text.get_plane_height())
 
         return min(center_scale_x, center_scale_y)
 
     def get_scale_maximized_on_text(self, text):
-        x = text.plane_pos.x()
-        y = text.plane_pos.y()
         window_width = self.screen().size().width()
         window_height = self.screen().size().height()
         if self.show_editor:
             window_width *= 1 - Config.editor_width_ratio
 
+        x, y = text.plane_pos
         width_scale = window_width / (x + text.get_plane_width())
         width_scale *= 1 - Config.min_gap_win_edge * 9 / 16
         height_scale = window_height / (y + text.get_plane_height())

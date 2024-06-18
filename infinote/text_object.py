@@ -370,37 +370,48 @@ class TextboxInsidesRenderer:
 class BoxInfo:
     plane_pos: Tuple[float, float] = Config.initial_position
     manual_scale: float = Config.starting_box_scale
+    # children specific: if this box is a child, only those have effect, and not the two above
     scale_rel_to_parent: float = Config.child_relative_scale
+    # if kept at none, it will just be displayed to the right of the parent
+    # otherwise, it's a tuple with x and y relative position to the parent
     pos_rel_to_parent: Tuple[float, float] | None = None
     parent_filename: str | None = None
 
+    @property
+    def plane_pos_vect(self) -> QPointF:
+        return QPointF(*self.plane_pos)
 
-class DraggableText(QGraphicsProxyWidget):
+    @plane_pos_vect.setter
+    def plane_pos_vect(self, v: QPointF) -> None:
+        self.plane_pos = v.toTuple()
+
+    @property
+    def pos_rel_to_parent_vect(self) -> QPointF | None:
+        if self.pos_rel_to_parent is None:
+            return None
+        return QPointF(*self.pos_rel_to_parent)
+
+    @pos_rel_to_parent_vect.setter
+    def pos_rel_to_parent_vect(self, v: QPointF) -> None:
+        self.pos_rel_to_parent = v.toTuple()
+
+
+class DraggableText(QGraphicsProxyWidget, BoxInfo):
     # it has position related functions
     def __init__(self, box_info, nvim, buffer_handle, filename, view, all_parents):
-        super().__init__()
+        QGraphicsProxyWidget.__init__(self)
+        BoxInfo.__init__(self, **box_info.__dict__)
 
         # note that num doesn't need to be the same as buffer_handle.number
         self.buffer = buffer_handle
         self.filename = filename
         self.view = view
         self.all_parents = all_parents
-        self.setScale(box_info.manual_scale)
+        self.setScale(self.manual_scale)
         self._pin_pos = None
         self.folds = []
         self.sign_lines = []
         self._height = 0
-
-        self.plane_pos = QPointF(*box_info.plane_pos)
-        self.manual_scale = box_info.manual_scale
-        # children specific: if this box is a child, only those have effect, and not the two above
-        self.scale_rel_to_parent = box_info.scale_rel_to_parent
-        # if kept at none, it will just be displayed to the right of the parent
-        # otherwise, it's a tuple with x and y relative position to the parent
-        self.pos_rel_to_parent = (
-            QPointF(*box_info.pos_rel_to_parent) if box_info.pos_rel_to_parent else None
-        )
-        self.parent_filename = box_info.parent_filename
 
         # optionally, send some input on creation
         if is_buf_empty(self.buffer) and Config.input_on_creation:
@@ -423,17 +434,15 @@ class DraggableText(QGraphicsProxyWidget):
 
         self.setWidget(self.insides_renderer.text_box)
 
-    def mouseMoveEvent(self, event):
-        # # this reserves dragging for ctrl+drag, and normal selection for drag
-        # is_ctrl_pressed = event.modifiers() & Qt.ControlModifier
-        # if not is_ctrl_pressed:
-        #     super().mouseMoveEvent(event)
-        #     return
+    def __hash__(self) -> int:
+        # use QGraphicProxyWidget's hash
+        return QGraphicsProxyWidget.__hash__(self)
 
+    def mouseMoveEvent(self, event):
         # drag around
         mouse_end = QPointF(event.screenPos() / self.view.global_scale)
         displacement = self.get_plane_scale() * self._pin_pos
-        self.plane_pos = mouse_end - displacement
+        self.plane_pos_vect = mouse_end - displacement
 
         self.all_parents[self] = None
         self.reposition()
@@ -446,7 +455,8 @@ class DraggableText(QGraphicsProxyWidget):
             return parent.get_plane_scale() * self.scale_rel_to_parent
         elif Config.autoshrink:
             # euclidean magniture of plane_pos
-            distance = (self.plane_pos.x() ** 2 + self.plane_pos.y() ** 2) ** 0.5
+            x, y = self.plane_pos
+            distance = (x**2 + y**2) ** 0.5
             distance_scale = distance / Config._initial_distance
             return self.manual_scale * distance_scale
         else:
@@ -455,25 +465,8 @@ class DraggableText(QGraphicsProxyWidget):
     def reposition(self):
         global_scale = self.view.global_scale
         self.setScale(self.get_plane_scale() * global_scale)
-        self.setPos(self.plane_pos * global_scale)
-        self.update_height()
+        self.setPos(self.plane_pos_vect * global_scale)
 
-        # place children
-        children = self.all_parents.inverted().getlist(self)
-        width = self.get_plane_width()
-        gap = Config.text_gap * self.get_plane_scale() / self.manual_scale
-        height_acc = 0
-        for child in children:
-            child.plane_pos = self.plane_pos + QPointF(width + gap, height_acc)
-            child.reposition()
-            height_acc += child.get_plane_height() + gap
-
-    def _calculate_height(self):
-        height = self.insides_renderer.text_box.document().size().height() + 2
-        height = min(height, Config.text_max_height)
-        return height
-
-    def update_height(self):
         # set height
         # for some reason it needs to be done twice, to prevent a glitch
         # only the smaller of those two heights is valid
@@ -482,6 +475,21 @@ class DraggableText(QGraphicsProxyWidget):
         height = min(self._calculate_height(), height)
         self.insides_renderer.text_box.setFixedHeight(height)
         self._height = height
+
+        # place children
+        children = self.all_parents.inverted().getlist(self)
+        width = self.get_plane_width()
+        gap = Config.text_gap * self.get_plane_scale() / self.manual_scale
+        height_acc = 0
+        for child in children:
+            child.plane_pos_vect = self.plane_pos_vect + QPointF(width + gap, height_acc)
+            child.reposition()
+            height_acc += child.get_plane_height() + gap
+
+    def _calculate_height(self):
+        height = self.insides_renderer.text_box.document().size().height() + 2
+        height = min(height, Config.text_max_height)
+        return height
 
     def get_plane_width(self):
         return self.get_plane_scale() * Config.text_width
@@ -494,11 +502,12 @@ class DraggableText(QGraphicsProxyWidget):
         # note: it's in screen coords, not plane coords
         return self.mapToScene(self.rect().center())
 
-    def save(self, nvim):
+    def get_rel_filename(self):
         if self.filename is None:
-            # this buffer was not created by this program, so don't save it
-            return
+            return None
+        return Path(self.filename).relative_to(self.view.workspace_dir).as_posix()
 
+    def save_text_buffer(self, nvim):
         # take the actual filename from the buffer
         buf_filename = self.buffer.name
         buf_filename = Path(buf_filename).resolve().as_posix()
@@ -509,42 +518,19 @@ class DraggableText(QGraphicsProxyWidget):
         nvim.api.set_current_buf(self.buffer.number)
         # save it
         nvim.command("w")
-    
-    def get_rel_filename(self):
-        if self.filename is None:
-            return None
-        return Path(self.filename).relative_to(self.view.workspace_dir).as_posix()
-    
+
     def persist_info(self):
-        if self.filename is None:
-            return
-        info = dict(
-            plane_pos=tuple(self.plane_pos.toTuple()),
-            manual_scale=self.manual_scale,
-            scale_rel_to_parent=self.scale_rel_to_parent,
-            pos_rel_to_parent=(
-                tuple(self.pos_rel_to_parent.toTuple()) if self.pos_rel_to_parent else None
-            ),
-            parent_filename=self.parent_filename,
-        )
+        # put in info all the BoxInfo fields (look at BoxInfo class attributes)
+        info = {k: self.__dict__[k] for k in BoxInfo.__annotations__}
         filepath = Path(self.filename).resolve()
         info_path = filepath.parent / ".box_info" / f"{filepath.stem}.json"
         info_path.write_text(json.dumps(info, indent=4))
 
     def load_info(self):
-        if self.filename is None:
-            return
         filepath = Path(self.filename).resolve()
         info_path = filepath.parent / ".box_info" / f"{filepath.stem}.json"
         info = json.loads(info_path.read_text())
-
-        self.plane_pos = QPointF(*info["plane_pos"])
-        self.manual_scale = info["manual_scale"]
-        self.scale_rel_to_parent = info["scale_rel_to_parent"]
-        if info["pos_rel_to_parent"] is not None:
-            self.pos_rel_to_parent = QPointF(*info["pos_rel_to_parent"])
-        self.parent_filename = info["parent_filename"]
-
+        self.__dict__.update(info)
 
 
 class EditorBox(QGraphicsProxyWidget):

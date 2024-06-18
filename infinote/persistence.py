@@ -102,6 +102,8 @@ def save_scene(buf_handler: BufferHandler, nvim: Nvim, workspace_dir: Path):
 
     # save each text
     for text in buf_handler.get_texts():
+        if text.filename is None:
+            # this buffer was not created by this program, so don't save it
+            continue
         text.persist_info()
-    for text in buf_handler.get_texts():
-        text.save(nvim)
+        text.save_text_buffer(nvim)

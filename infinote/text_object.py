@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import json
 from pathlib import Path
 import re
 from typing import Tuple
@@ -511,6 +512,23 @@ class DraggableText(QGraphicsProxyWidget):
         if self.filename is None:
             return None
         return Path(self.filename).relative_to(self.view.workspace_dir).as_posix()
+    
+    def persist_info(self):
+        if self.filename is None:
+            return
+        info = dict(
+            plane_pos=tuple(self.plane_pos.toTuple()),
+            manual_scale=self.manual_scale,
+            scale_rel_to_parent=self.scale_rel_to_parent,
+            pos_rel_to_parent=(
+                tuple(self.pos_rel_to_parent.toTuple()) if self.pos_rel_to_parent else None
+            ),
+            parent_filename=self.parent_filename,
+        )
+        filepath = Path(self.filename).resolve()
+        info_path = filepath.parent / ".box_info" / f"{filepath.stem}.json"
+        info_path.write_text(json.dumps(info, indent=4))
+
 
 
 class EditorBox(QGraphicsProxyWidget):

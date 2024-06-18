@@ -39,12 +39,14 @@ def load_scene(buf_handler: BufferHandler, group_dir: Path):
         assert not any(top_dir.iterdir()), f"workdir_dir not empty: {top_dir}"
         # create the main subdir
         group_dir.mkdir(exist_ok=True)
+        (group_dir / ".box_info").mkdir(exist_ok=True)
         # create one text
         buf_handler.create_text(group_dir, BoxInfo())
         return
 
     # create the main subdir
     group_dir.mkdir(exist_ok=True)
+    (group_dir / ".box_info").mkdir(exist_ok=True)
     meta.update(json.loads(meta_path.read_text()))
     subdirs = [d for d in top_dir.iterdir() if d.is_dir()]
     print(f"subdirs: {[dir.name for dir in subdirs]}")
@@ -90,10 +92,9 @@ def load_scene(buf_handler: BufferHandler, group_dir: Path):
 
 def save_scene(buf_handler: BufferHandler, nvim: Nvim, group_dir: Path):
     workspace_dir = group_dir.parent
-    # record text metadata
     meta = {}
 
-
+    # todo this will be removed
     for text in buf_handler.get_texts():
         if text.filename is None:
             # this buffer was not created by this program, so don't save it
@@ -108,6 +109,10 @@ def save_scene(buf_handler: BufferHandler, nvim: Nvim, group_dir: Path):
             ),
             parent_filename=text.parent_filename,
         )
+    
+    for text in buf_handler.get_texts():
+        text.persist_info()
+    
 
     # record other data
     for subdir, hue in buf_handler.savedir_hues.items():

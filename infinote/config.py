@@ -37,11 +37,11 @@ colemak_keys = {
 
 class Config:
     # if False, you will be kept in insert mode and so saved from vimming
-    # vim_mode = False
-    vim_mode = True
+    vim_mode = False
+    # vim_mode = True
     # which keys to use for navigation and zooming
-    # keys = qwerty_keys
-    keys = colemak_keys
+    keys = qwerty_keys
+    # keys = colemak_keys
 
     # size params
     text_width = 340

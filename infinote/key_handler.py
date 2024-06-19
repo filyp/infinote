@@ -51,12 +51,17 @@ def parse_key_event_into_text(event):
 
 def _handle_non_vim_visual_mode(nvim, text):
     match text:
+        case "<C-x>" | "<C-c>":
+            nvim.input(text)
         case "<BS>": # delete text
             nvim.input("c")
         case "<Esc>":  # leave visual mode
             nvim.input("<Esc>")  # NOSONAR
         case _:  # replace text 
             nvim.input("c" + text)
+    if nvim.api.get_mode()["mode"] == "n":
+        nvim.input("i")
+    
 
 
 class KeyHandler:
@@ -66,24 +71,6 @@ class KeyHandler:
 
         self.command = ""
         self.external_command_mode = False
-
-    def _absorb_key_into_command_line(self, text, raw_text):
-        match text:
-            case "<Esc>":
-                if self.external_command_mode:
-                    self.nvim.input("<Esc>")
-                    self.external_command_mode = False
-                self.command = ""
-            case "<CR>":
-                # execute the command
-                self.nvim.input(f"{self.command}<CR>")
-                self.external_command_mode = False
-                self.command = ""
-            case "<BS>":
-                self.command = self.command[:-1]
-            case _:
-                if raw_text:
-                    self.command += raw_text
 
     def handle_key_event(self, event):
         text = parse_key_event_into_text(event)
@@ -210,3 +197,21 @@ class KeyHandler:
             #     else:
             #         view.show_editor = True
             #         view.editor_box.show()
+
+    def _absorb_key_into_command_line(self, text, raw_text):
+        match text:
+            case "<Esc>":
+                if self.external_command_mode:
+                    self.nvim.input("<Esc>")
+                    self.external_command_mode = False
+                self.command = ""
+            case "<CR>":
+                # execute the command
+                self.nvim.input(f"{self.command}<CR>")
+                self.external_command_mode = False
+                self.command = ""
+            case "<BS>":
+                self.command = self.command[:-1]
+            case _:
+                if raw_text:
+                    self.command += raw_text

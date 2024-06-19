@@ -1,3 +1,21 @@
+" " Implement normal ctrl functions in vim, for non-vim users
+" Undo in n and i mode
+nnoremap <C-z> u
+inoremap <C-z> <C-o>u
+" Redo in n and i mode
+nnoremap <C-S-z> <C-r>
+inoremap <C-S-z> <C-o><C-r>
+" Cut in v and V mode
+vnoremap <C-x> "+x
+" Copy in v and V mode
+vnoremap <C-c> "+y
+" Paste in n and i mode
+nnoremap <C-v> "+p
+inoremap <C-v> <C-r>+
+" Select All in n and i mode
+nnoremap <C-a> ggVG
+inoremap <C-a> <Esc>ggVG
+
 let s:init_vim = expand('$HOME/.config/nvim/init.vim')
 if filereadable(s:init_vim)
   execute 'source ' . s:init_vim

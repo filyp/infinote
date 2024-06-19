@@ -157,6 +157,8 @@ class KeyHandler:
             case "bookmark jump":
                 if mode == "i":
                     self.nvim.input("<Esc>")
+                if buf_handler.get_current_text().filename is not None:
+                    return  # we are not in the bookmarks window, bc we have a filename
                 cmd = '<Home>"fyt|f|<Right>"lyiw:buffer<Space><C-r>f<Enter>:<C-r>l<Enter>'
                 self.nvim.input(cmd)
                 view.zoom_on_text(buf_handler.get_current_text())
@@ -193,13 +195,14 @@ class KeyHandler:
                 buf_handler.jump_forward()
                 view.zoom_on_text(buf_handler.get_current_text())
             case "delete text":
+                current_text = buf_handler.get_current_text()
+                current_text.parent_filename = None
+                buf_handler.parents.pop(current_text, None)
                 buf_handler.delete_buf(self.nvim.current.buffer)
-                # todo! delete children to enable deleting parent
-                # buf_handler.parents.pop(buf_handler.get_current_text(), None)
             case "detach child":
                 current_text = buf_handler.get_current_text()
                 current_text.parent_filename = None
-                buf_handler.parents[current_text] = None
+                buf_handler.parents.pop(current_text, None)
             # case "toggle editor":
             #     if view.show_editor:
             #         view.show_editor = False

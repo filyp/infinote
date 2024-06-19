@@ -101,6 +101,9 @@ class BufferHandler:
         if children:
             self.view.msg("can't delete a text with children")
             return
+        if len(self.buf_num_to_text) == 1:
+            self.view.msg("can't delete the only text")
+            return
 
         if text.filename is not None:
             # delete the file

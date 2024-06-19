@@ -63,9 +63,9 @@ class GraphicView(QGraphicsView):
     def _render_status_bar(self):
         mode_dict = self.nvim.api.get_mode()
         if not mode_dict["blocking"]:
-            num_unbound_buffers = self.buf_handler.get_num_unbound_buffers()
-            if num_unbound_buffers > 0:
-                self.msg(f"{num_unbound_buffers} unbound buffer exists")
+            num_unbound_bufs = self.buf_handler.get_num_unbound_buffers()
+            if num_unbound_bufs > 0:
+                self.msg(f"{num_unbound_bufs} unbound buffer exists - click somewhere to place it")
 
             if mode_dict["mode"] == "c":
                 # the command mode was entered not by us, but externally

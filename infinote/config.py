@@ -43,11 +43,13 @@ class Config:
     # keys = qwerty_keys
     keys = colemak_keys
 
-    text_width = 350
+    # size params
+    text_width = 340
     text_max_height = text_width  # * 1.618
-    starting_box_scale = 0.75
+    starting_box_scale = 0.9
     # how much smaller the child boxes are compared to their parent on their creation
-    child_relative_scale = 0.8
+    child_relative_scale = 0.85
+    editor_width_ratio = 1 / 3  # part of screen width for the editor
     text_gap = 6
 
     # closer to 1 is slower (must be larger than 1)
@@ -66,11 +68,10 @@ class Config:
 
     # https://blog.depositphotos.com/15-cyberpunk-color-palettes-for-dystopian-designs.html
     background_color = "#000000"
-    border_brightness = "15%"
-    text_brightness = "80%"
-    selection_brightness = "23%"
-    non_persistent_hue = 341
-    editor_width_ratio = 1 / 3  # part of screen width for the editor
+    border_brightness = 0.4
+    text_brightness = 0.8
+    selection_brightness = 0.23
+    non_persistent_hue = 340
     sign_color = QColor.fromHsl(289, 100, 38)
     # lines matching this regex will be highlighted
     highlight_lines_regex = re.compile(r"^[\s-]*[!?]")
@@ -111,9 +112,9 @@ class Config:
     input_on_creation_aichat = """\
 >>> user
 
+
 >>> include
-{files_to_include}
-"""
+{files_to_include}"""
 
     # font sizes for each indent level
     # font_sizes = [16] * 4 + [14] * 4 + [11] * 4

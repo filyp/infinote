@@ -46,7 +46,9 @@ class IgnoringKeysTextEdit(QTextEdit):
 
 
 class TextboxInsidesRenderer:
-    def __init__(self, hue, init_folds, init_signs, style=None, set_width=True):
+    def __init__(
+        self, hue, init_folds, init_signs, style=None, set_width=True, brightness_multiplier=1
+    ):
         self.text_box = IgnoringKeysTextEdit()
         if set_width:
             self.text_box.setFixedWidth(Config.text_width)
@@ -58,23 +60,24 @@ class TextboxInsidesRenderer:
             style = f"""
                 QTextEdit {{
                     background-color: {Config.background_color};
-                    border: 1px solid hsl({hue}, 96%, {Config.border_brightness});
-                    color: hsl({hue}, 96%, {Config.text_brightness});
+                    border: 1px solid hsl({hue}, 96%, {Config.border_brightness:.0%});
+                    color: hsl({hue}, 96%, {Config.text_brightness:.0%});
                 }}
                 QScrollBar:vertical {{
                     width: 15px;
                     background: {Config.background_color};
                 }}
                 QScrollBar::handle:vertical {{
-                    background-color: hsl({hue}, 96%, {Config.border_brightness});
+                    background-color: hsl({hue}, 96%, {Config.border_brightness:.0%});
                 }}
             """
         self.text_box.setStyleSheet(style)
         self.text_color = QColor()
-        self.text_color.setHsl(hue, 96, int(Config.text_brightness[:-1]))
+        self.text_color.setHsl(hue, 96, int(Config.text_brightness * 100))
         self.selection_color = QColor()
-        self.selection_color.setHsl(hue, 96, int(Config.selection_brightness[:-1]))
+        self.selection_color.setHsl(hue, 96, int(Config.selection_brightness * 100))
         self._border_glowing = False
+        self.brightness_multiplier = brightness_multiplier
 
         doc = self.text_box.document()
         doc.setIndentWidth(1)
@@ -350,9 +353,10 @@ class TextboxInsidesRenderer:
             return
         # replace border brightness
         brightness = Config.text_brightness if state else Config.border_brightness
+        brightness *= self.brightness_multiplier
         style = re.sub(
             r"(border: 1px solid hsl\(.*, .*,) (.*)\);",
-            rf"\1 {brightness});",
+            rf"\1 {brightness:.0%});",
             self.text_box.styleSheet(),
         )
         self.text_box.setStyleSheet(style)
@@ -416,20 +420,23 @@ class DraggableText(QGraphicsProxyWidget, BoxInfo):
                 file_pattern = "./**/*.md"
                 nvim.command("startinsert")
                 nvim.input(Config.input_on_creation_aichat.format(files_to_include=file_pattern))
-        if filename is None:
-            # it's non-persistent buffer, so mark its border yellow
-            hue = Config.non_persistent_hue
-        else:
+                # move to the second line, not changing the mode
+                nvim.current.window.cursor = [2, 0]
+        if filename is not None:
             savedir = Path(filename).parent
-            hue = self.view.buf_handler.savedir_hues[savedir]
-
-        # get folds and signs for potential future drawing
         assert self.buffer == nvim.current.buffer
-        folds = nvim.eval("GetAllFolds()")
-        signs = nvim.eval("sign_getplaced()")
 
-        self.insides_renderer = TextboxInsidesRenderer(hue, folds, signs)
-
+        self.insides_renderer = TextboxInsidesRenderer(
+            hue=(
+                Config.non_persistent_hue
+                if filename is None
+                else self.view.buf_handler.savedir_hues[savedir]
+            ),
+            brightness_multiplier=0.5 if filename is None else 1,
+            # get folds and signs for potential future drawing
+            init_folds=nvim.eval("GetAllFolds()"),
+            init_signs=nvim.eval("sign_getplaced()"),
+        )
         self.setWidget(self.insides_renderer.text_box)
 
     def __hash__(self) -> int:
@@ -552,19 +559,19 @@ class EditorBox(QGraphicsProxyWidget):
 
         hue = 180
         saturation = 0
-        text_brightness = "100%"
+        text_brightness = 1
         style = f"""
             QTextEdit {{
                 background-color: {Config.background_color};
-                border: 1px solid hsl({hue}, {saturation}%, {Config.text_brightness});
-                color: hsl({hue}, {saturation}%, {text_brightness});
+                border: 1px solid hsl({hue}, {saturation}%, {Config.text_brightness:.0%});
+                color: hsl({hue}, {saturation}%, {text_brightness:.0%});
             }}
             QScrollBar:vertical {{
                 width: 15px;
                 background: {Config.background_color};
             }}
             QScrollBar::handle:vertical {{
-                background-color: hsl({hue}, {saturation}%, {Config.border_brightness});
+                background-color: hsl({hue}, {saturation}%, {Config.border_brightness:.0%});
             }}
         """
 

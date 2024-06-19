@@ -296,7 +296,7 @@ class BufferHandler:
         # draw sign lines
         for buf_num in to_redraw:
             text = self.buf_num_to_text[buf_num]
-            text.insides_renderer.draw_sign_lines(all_lines[buf_num])
+            text.insides_renderer.highlight_special_lines(all_lines[buf_num])
 
         # draw cursor in current
         if not self.view.show_editor:
@@ -314,7 +314,7 @@ class BufferHandler:
             # # hide folds deletes lines so it needs to be at the end
             # text.insides_renderer.set_invisible_cursor_pos()
             # text.insides_renderer.hide_folds() # todo maybe add it back later
-            text.insides_renderer.hide_indented_lines()
+            text.insides_renderer.hide_unimportant_lines()
 
         # reposition all text boxes
         for text in self.get_root_texts():
@@ -328,7 +328,7 @@ class BufferHandler:
             editor_box = self.view.editor_box
             editor_box.insides_renderer.update_text(lines, extmarks)
             editor_box.insides_renderer.update_current_text(mode_info, cur_buf_info, lines)
-            editor_box.insides_renderer.draw_sign_lines(lines)
+            editor_box.insides_renderer.highlight_special_lines(lines)
             editor_box.insides_renderer.draw_cursor(mode_info, cur_buf_info)
             editor_box.insides_renderer.set_invisible_cursor_pos()
             # editor_box.insides_renderer.hide_folds() # todo maybe add it back later

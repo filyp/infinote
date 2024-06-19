@@ -70,6 +70,8 @@ class Config:
     non_persistent_hue = 341
     editor_width_ratio = 1 / 3  # part of screen width for the editor
     sign_color = QColor.fromHsl(289, 100, 38)
+    # lines matching this regex will be highlighted
+    highlight_lines_regex = re.compile(r"^[\s-]*[!?]")
 
     # (note: the order of modifiers must be M-, A-, S-, C-)
     # keys that cannot be used: hjkl yuio men p
@@ -88,9 +90,12 @@ class Config:
         "<A-Right>": "jump forward",
         # when in bookmarks window, jump to location of bookmark under cursor
         f"<{mod}-b>": "bookmark jump",
-        # todo remove this option and this functionality?
+        # todo? remove this option and this functionality?
         # # toggle editor View
         # f"<{mod}-v>": "toggle editor",
+        # custom jumps because otherwise they produce unwanted buffers
+        "<C-o>": "jump back",
+        "<C-i>": "jump forward",
     }
     # todo change back
     # keys.update(qwerty_keys)

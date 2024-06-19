@@ -3,6 +3,9 @@ from PySide6.QtCore import Qt, QTimer
 from infinote.config import Config
 
 
+_cmd_normalizer = {"<S-:>": ":", ":": ":", "/": "/", "<S-?>": "?", "?": "?", "<S-/>": "?"}
+
+
 def parse_key_event_into_text(event):
     special_keys = {
         32: "Space",
@@ -46,6 +49,15 @@ def parse_key_event_into_text(event):
 
     return text
 
+def _handle_non_vim_visual_mode(nvim, text):
+    match text:
+        case "<BS>": # delete text
+            nvim.input("c")
+        case "<Esc>":  # leave visual mode
+            nvim.input("<Esc>")  # NOSONAR
+        case _:  # replace text 
+            nvim.input("c" + text)
+
 
 class KeyHandler:
     def __init__(self, nvim, view):
@@ -53,38 +65,25 @@ class KeyHandler:
         self.view = view
 
         self.command = ""
-        self.command_mode = False
         self.external_command_mode = False
-        self.search_mode = False
-        self.backward_search_mode = False
 
-    def _absorb_key_into_command_line(self, text, event):
-        if text == "<Esc>":  # NOSONAR
-            if self.external_command_mode:
-                self.nvim.input("<Esc>")
-            self.command_mode = False
-            self.external_command_mode = False
-            self.search_mode = False
-            self.backward_search_mode = False
-            self.command = ""
-        elif text == "<BS>":
-            self.command = self.command[:-1]
-        elif text == "<CR>":
-            if self.command_mode:
-                self.nvim.input(f":{self.command}<CR>")
-            elif self.external_command_mode:
+    def _absorb_key_into_command_line(self, text, raw_text):
+        match text:
+            case "<Esc>":
+                if self.external_command_mode:
+                    self.nvim.input("<Esc>")
+                    self.external_command_mode = False
+                self.command = ""
+            case "<CR>":
+                # execute the command
                 self.nvim.input(f"{self.command}<CR>")
-            elif self.search_mode:
-                self.nvim.input(f"/{self.command}<CR>")
-            elif self.backward_search_mode:
-                self.nvim.input(f"?{self.command}<CR>")
-            self.command_mode = False
-            self.external_command_mode = False
-            self.search_mode = False
-            self.backward_search_mode = False
-            self.command = ""
-        elif event.text():
-            self.command += event.text()
+                self.external_command_mode = False
+                self.command = ""
+            case "<BS>":
+                self.command = self.command[:-1]
+            case _:
+                if raw_text:
+                    self.command += raw_text
 
     def handle_key_event(self, event):
         text = parse_key_event_into_text(event)
@@ -102,64 +101,42 @@ class KeyHandler:
                 # don't allow leaving insert mode
                 return
             if mode == "v" or mode == "V":
-                if text == "<BS>":
-                    # delete text
-                    self.nvim.input("c")
-                if text == "<Esc>":
-                    # leave visual mode
-                    self.nvim.input("<Esc>")
-                else:
-                    # replace text
-                    self.nvim.input("c" + text)
+                _handle_non_vim_visual_mode(self.nvim, text)
                 return
 
-        if text == "<C-i>" or text == "<C-o>":
-            # don't allow this, because they create unwanted buffers
-            return
-
-        if mode != "n" and mode != "c":
+        if mode not in ["n", "c"]:
             # send that key
             self.nvim.input(text)
             return
+
         # if we're here, we're in normal or command mode
-
         # monitor command and search input
-        # todo simplify
-        if (
-            self.command_mode
-            or self.external_command_mode
-            or self.search_mode
-            or self.backward_search_mode
-        ):
+        if self.command or self.external_command_mode:
             # eat the keypress into self.command
-            self._absorb_key_into_command_line(text, event)
+            self._absorb_key_into_command_line(text, event.text())
             return
-
-        match text:
-            # handle entering command line
-            case "<S-:>" | ":":
-                self.command_mode = True
-            case "/":
-                self.search_mode = True
-            case "<S-/>" | "<S-?>" | "?":
-                self.backward_search_mode = True
-            case _:
-                # send that key
-                self.nvim.input(text)
+        assert self.command == ""
+        if text in _cmd_normalizer:
+            self.command = _cmd_normalizer[text]
+            return
+        
+        # send that key
+        self.nvim.input(text)
 
     def get_command_line(self):
-        if self.command_mode:
-            return ":" + self.command
-        elif self.external_command_mode:
-            return ":... " + self.command
-        elif self.search_mode:
-            return "/" + self.command
-        elif self.backward_search_mode:
-            return "?" + self.command
+        if self.external_command_mode:
+            return "..." + self.command
         else:
-            return ""
+            return self.command
+    
+    def _continuous_command(self, function):
+        view = self.view
+        if view.timer is None:
+            view.timer = QTimer()
+            view.timer.timeout.connect(function)
+            view.timer.start(1000 / Config.FPS)
 
-    def handle_custom_command(self, key_combo, mode):  # NOSONAR
+    def handle_custom_command(self, key_combo, mode):
         if key_combo not in Config.keys:
             return
         command = Config.keys[key_combo]
@@ -196,37 +173,25 @@ class KeyHandler:
             case "move right":
                 view.jump_to_neighbor("right")
             case "zoom up":
-                if view.timer is None:
-                    view.timer = QTimer()
-                    view.timer.timeout.connect(lambda: view.zoom(-1))
-                    view.timer.start(1000 / Config.FPS)
+                self._continuous_command(lambda: view.zoom(-1))
             case "zoom down":
-                if view.timer is None:
-                    view.timer = QTimer()
-                    view.timer.timeout.connect(lambda: view.zoom(1))
-                    view.timer.start(1000 / Config.FPS)
+                self._continuous_command(lambda: view.zoom(1))
             case "grow box":
-                if view.timer is None:
-                    view.timer = QTimer()
-                    view.timer.timeout.connect(lambda: view.resize(1))
-                    view.timer.start(1000 / Config.FPS)
+                self._continuous_command(lambda: view.resize(1))
             case "shrink box":
-                if view.timer is None:
-                    view.timer = QTimer()
-                    view.timer.timeout.connect(lambda: view.resize(-1))
-                    view.timer.start(1000 / Config.FPS)
+                self._continuous_command(lambda: view.resize(-1))
             case "jump back":
                 buf_handler.jump_back()
                 view.zoom_on_text(buf_handler.get_current_text())
             case "jump forward":
                 buf_handler.jump_forward()
                 view.zoom_on_text(buf_handler.get_current_text())
-            case "toggle editor":
-                if view.show_editor:
-                    view.show_editor = False
-                    view.editor_box.hide()
-                else:
-                    view.show_editor = True
-                    view.editor_box.show()
             case "delete text":
                 buf_handler.delete_buf(self.nvim.current.buffer)
+            # case "toggle editor":
+            #     if view.show_editor:
+            #         view.show_editor = False
+            #         view.editor_box.hide()
+            #     else:
+            #         view.show_editor = True
+            #         view.editor_box.show()

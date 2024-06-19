@@ -136,15 +136,6 @@ class TextboxInsidesRenderer:
         nvim.input("v")
         nvim.api.win_set_cursor(0, (y_end, x_end))
 
-        # todo it will be buggy for now
-        # in non-vim mode, backspace should do d
-        # everything else chould be c...
-        # we could now stop drawing manually vim selection
-        # but then we also need sync it from vim into qt
-        #     actually we can't bc rect selection can't be represented
-        #     so just set the same style
-        # and maybe change the style into something nicer in qt
-
     def _format_displayed_lines(self):
         # set the fancy formatting, with nice indents and decreasing font sizes
         cursor = self.text_box.textCursor()
@@ -295,19 +286,22 @@ class TextboxInsidesRenderer:
                 block = block.next()
             line_num += 1
 
-    def hide_indented_lines(self):
-        # todo don't hide if
+    def hide_unimportant_lines(self):
         lines = self.text_box.toPlainText().split("\n")
         line_nums_to_hide = []
         for i, line in enumerate(lines):
-            if line.strip() == "":
+            if (
+                # keep lines with a non-space character at the beginning
+                re.match(r"^\S", line)
                 # keep empty lines
-                continue
-            if i + 1 in self.sign_lines:
+                or line.strip() == ""
+                # keep lines with "- !" or "- ?" or "!" or "?" at the beginning
+                or Config.highlight_lines_regex.match(line)
                 # keep bookmarked lines
+                or i + 1 in self.sign_lines
+            ):
                 continue
-            if line[0] == " " or line[0] == "\t":
-                line_nums_to_hide.append(i)
+            line_nums_to_hide.append(i)
 
         # delete the lines
         # note: it would be more efficient to only draw from the start what is necessary
@@ -326,13 +320,12 @@ class TextboxInsidesRenderer:
                 block = block.next()
             line_num += 1
 
-    def draw_sign_lines(self, lines):
-        for sign_line in self.sign_lines:
-            if sign_line > len(lines):
-                # print("warning: bookmarked line no longer exists")
-                continue
-            line_width = len(lines[sign_line - 1])
-            self.highlight(Config.sign_color, (sign_line, 1), (sign_line, line_width))
+    def highlight_special_lines(self, lines):
+        for i, line in enumerate(lines):
+            # highlight sign_lines or those matching the regex
+            if i + 1 in self.sign_lines or Config.highlight_lines_regex.match(line):
+                line_width = len(line)
+                self.highlight(Config.sign_color, (i + 1, 1), (i + 1, line_width))
 
     def _set_sign_lines(self, signs):
         if signs != []:

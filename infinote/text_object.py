@@ -435,11 +435,17 @@ class DraggableText(QGraphicsProxyWidget, BoxInfo):
         # drag around
         mouse_end = QPointF(event.screenPos() / self.view.global_scale)
         displacement = self.get_plane_scale() * self._pin_pos
-        self.plane_pos_vect = mouse_end - displacement
-
-        self.all_parents[self] = None
-        self.parent_filename = None
-        self.reposition()
+        target_pos = mouse_end - displacement
+        if self.parent_filename is None:
+            self.plane_pos_vect = target_pos
+            self.reposition()
+        else:
+            # this is a child
+            parent = self.all_parents[self]
+            parent_pos = parent.plane_pos_vect
+            parent_scale = parent.get_plane_scale()
+            self.pos_rel_to_parent_vect = (target_pos - parent_pos) / parent_scale
+            parent.reposition()
         # self.view.dummy.setFocus()
 
     def get_plane_scale(self):
@@ -476,9 +482,15 @@ class DraggableText(QGraphicsProxyWidget, BoxInfo):
         gap = Config.text_gap * self.get_plane_scale() / self.manual_scale
         height_acc = 0
         for child in children:
-            child.plane_pos_vect = self.plane_pos_vect + QPointF(width + gap, height_acc)
-            child.reposition()
-            height_acc += child.get_plane_height() + gap
+            if child.pos_rel_to_parent is None:
+                child.plane_pos_vect = self.plane_pos_vect + QPointF(width + gap, height_acc)
+                child.reposition()
+                height_acc += child.get_plane_height() + gap
+            else:
+                child.plane_pos_vect = (
+                    self.plane_pos_vect + child.pos_rel_to_parent_vect * self.get_plane_scale()
+                )
+                child.reposition()
 
     def _calculate_height(self):
         height = self.insides_renderer.text_box.document().size().height() + 2

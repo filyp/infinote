@@ -95,6 +95,10 @@ class KeyHandler:
             # custom command pressed
             self.handle_custom_command(text, mode)
             return
+        
+        if text in ["<C-o>", "<C-i>"]:
+            # ignore because otherwise they produce unwanted buffers
+            return
 
         if not Config.vim_mode: 
             if mode == "i" and text == "<Esc>":
@@ -188,6 +192,10 @@ class KeyHandler:
                 view.zoom_on_text(buf_handler.get_current_text())
             case "delete text":
                 buf_handler.delete_buf(self.nvim.current.buffer)
+            case "detach child":
+                current_text = buf_handler.get_current_text()
+                current_text.parent_filename = None
+                buf_handler.parents[current_text] = None
             # case "toggle editor":
             #     if view.show_editor:
             #         view.show_editor = False

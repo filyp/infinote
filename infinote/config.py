@@ -3,7 +3,7 @@ import re
 from PySide6.QtGui import QColor, QFont
 
 # main modifier used for the keybindings
-mod = "C"  
+mod = "C"
 # mod = "A"  # move to alt if ctrl conflicts for you
 
 # (note: the order of modifiers must be M-, A-, S-, C-)
@@ -37,18 +37,18 @@ colemak_keys = {
 
 class Config:
     # if False, you will be kept in insert mode and so saved from vimming
-    # todo change back
     # vim_mode = False
     vim_mode = True
+    # which keys to use for navigation and zooming
+    # keys = qwerty_keys
+    keys = colemak_keys
 
-    autoshrink = True
-    text_width = 400
+    text_width = 350
     text_max_height = text_width  # * 1.618
-    initial_position = (500, 40)
-    text_gap = 6
     starting_box_scale = 0.75
     # how much smaller the child boxes are compared to their parent on their creation
     child_relative_scale = 0.8
+    text_gap = 6
 
     # closer to 1 is slower (must be larger than 1)
     scroll_speed = 1.0005
@@ -59,6 +59,8 @@ class Config:
     # # whether to allow resizing text boxes with mouse wheel
     # scroll_can_resize_text = False
 
+    initial_position = (500, 40)
+    autoshrink = True
     # whether to change zoom level on jumps to a neighbor text
     track_jumps_on_neighbor_moves = False
 
@@ -75,31 +77,32 @@ class Config:
 
     # (note: the order of modifiers must be M-, A-, S-, C-)
     # keys that cannot be used: hjkl yuio men p
-    keys = {
-        # Give a comment to the current text
-        f"<{mod}-g>": "create child right",
-        # delete text
-        "<C-w>": "delete text",
-        # Teleport to any text using leap plugin
-        f"<{mod}-t>": "hop",
-        # Focus view on the current text box
-        f"<{mod}-f>": "center on current text",
-        # zoom in, pushing the current box to the Right
-        f"<{mod}-r>": "maximize on current text",
-        "<A-Left>": "jump back",
-        "<A-Right>": "jump forward",
-        # when in bookmarks window, jump to location of bookmark under cursor
-        f"<{mod}-b>": "bookmark jump",
-        # todo? remove this option and this functionality?
-        # # toggle editor View
-        # f"<{mod}-v>": "toggle editor",
-        # custom jumps because otherwise they produce unwanted buffers
-        "<C-o>": "jump back",
-        "<C-i>": "jump forward",
-    }
-    # todo change back
-    # keys.update(qwerty_keys)
-    keys.update(colemak_keys)
+    # free keys: qr as
+    keys.update(
+        {
+            # Give birth to a child box
+            f"<{mod}-g>": "create child right",
+            # delete text
+            "<C-w>": "delete text",
+            # Teleport to any text using leap plugin
+            f"<{mod}-t>": "hop",
+            # Focus view on the current text box
+            f"<{mod}-f>": "center on current text",
+            # zoom in, pushing the current box to the Right
+            f"<{mod}-r>": "maximize on current text",
+            # when in bookmarks window, jump to location of bookmark under cursor
+            f"<{mod}-b>": "bookmark jump",
+            # Detach child
+            f"<{mod}-d>": "detach child",
+            # Summon GPT through vim-ai plugin
+            f"<{mod}-s>": "summon gpt",
+            "<A-Left>": "jump back",
+            "<A-Right>": "jump forward",
+            # todo? remove this option and this functionality?
+            # # toggle editor View
+            # f"<{mod}-v>": "toggle editor",
+        }
+    )
 
     # relevant for zooming and resizing with keys
     FPS = 180

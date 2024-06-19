@@ -407,10 +407,15 @@ class DraggableText(QGraphicsProxyWidget, BoxInfo):
         self._height = 0
 
         # optionally, send some input on creation
-        if is_buf_empty(self.buffer) and Config.input_on_creation:
-            nvim.command("startinsert")
-            nvim.input(Config.input_on_creation)
-
+        if is_buf_empty(self.buffer) and self.filename is not None:
+            if self.filename.endswith(".md") and Config.input_on_creation:
+                nvim.command("startinsert")
+                nvim.input(Config.input_on_creation)
+            elif self.filename.endswith(".aichat") and Config.input_on_creation_aichat:
+                assert Path.cwd() == self.view.workspace_dir
+                file_pattern = "./**/*.md"
+                nvim.command("startinsert")
+                nvim.input(Config.input_on_creation_aichat.format(files_to_include=file_pattern))
         if filename is None:
             # it's non-persistent buffer, so mark its border yellow
             hue = Config.non_persistent_hue

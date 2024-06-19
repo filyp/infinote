@@ -160,14 +160,16 @@ class KeyHandler:
                 cmd = '<Home>"fyt|f|<Right>"lyiw:buffer<Space><C-r>f<Enter>:<C-r>l<Enter>'
                 self.nvim.input(cmd)
                 view.zoom_on_text(buf_handler.get_current_text())
-            case "center on current text":
+            case "focus on current text":
                 current_text = buf_handler.get_current_text()
                 view.global_scale = view.get_scale_centered_on_text(current_text)
             case "maximize on current text":
                 current_text = buf_handler.get_current_text()
                 view.global_scale = view.get_scale_maximized_on_text(current_text)
-            case "create child right":
+            case "create child":
                 buf_handler.create_child()
+            case "summon gpt":
+                buf_handler.create_child(filetype="aichat")
             case "move down":
                 view.jump_to_neighbor("down")
             case "move up":
@@ -192,6 +194,8 @@ class KeyHandler:
                 view.zoom_on_text(buf_handler.get_current_text())
             case "delete text":
                 buf_handler.delete_buf(self.nvim.current.buffer)
+                # todo! delete children to enable deleting parent
+                # buf_handler.parents.pop(buf_handler.get_current_text(), None)
             case "detach child":
                 current_text = buf_handler.get_current_text()
                 current_text.parent_filename = None

@@ -55,11 +55,11 @@ class BufferHandler:
         self.buf_num_to_text[buffer.number] = text
         return text
 
-    def create_text(self, savedir, box_info):
+    def create_text(self, savedir, box_info, filetype="md"):
         num_of_texts = len(self.buf_num_to_text)
         if num_of_texts == len(self.nvim.buffers) or num_of_texts == 0:
             self.last_file_nums[savedir] += 1
-            filename = f"{savedir}/{self.last_file_nums[savedir]}.md"
+            filename = f"{savedir}/{self.last_file_nums[savedir]}.{filetype}"
             return self.open_filename(box_info, filename)
 
         # some buffer was created some other way than calling create_text,
@@ -130,7 +130,7 @@ class BufferHandler:
     def get_current_text(self):
         return self.buf_num_to_text.get(self.nvim.current.buffer.number)
 
-    def create_child(self):
+    def create_child(self, filetype="md"):
         current_text = self.buf_num_to_text.get(self.nvim.current.buffer.number)
 
         if current_text.filename is None:
@@ -139,7 +139,9 @@ class BufferHandler:
             return
 
         child = self.create_text(
-            self.view.current_folder, BoxInfo(parent_filename=current_text.get_rel_filename())
+            self.view.current_folder,
+            BoxInfo(parent_filename=current_text.get_rel_filename()),
+            filetype=filetype,
         )
         self.parents[child] = current_text
 
@@ -157,9 +159,6 @@ class BufferHandler:
         self.forward_jumplist.append(old)
         self.jump_to_buffer(self.jumplist[-1])
         self.to_redraw.add(old)
-        # old_buf = self.nvim.buffers[old]
-        # if is_buf_empty(old_buf) or old_buf[:] == [Config.input_on_creation]:
-        #     self.delete_buf(old_buf)
 
     def jump_forward(self):
         if len(self.forward_jumplist) == 0:
@@ -169,9 +168,6 @@ class BufferHandler:
         new = self.forward_jumplist.pop()
         self.jumplist.append(new)
         self.jump_to_buffer(new)
-        # old_buf = self.nvim.buffers[old]
-        # if is_buf_empty(old_buf) or old_buf[:] == [Config.input_on_creation]:
-        #     self.delete_buf(old_buf)
 
     def _sanitize_buffers(self):
         current_buffer, wins = self.nvim.api.call_atomic(

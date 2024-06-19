@@ -14,13 +14,11 @@ Requires neovim to run. I you have existing `init.vim` file, it will be sourced.
 pipx install infinote-md
 ```
 
-
-I also recommend these vim plugins (but they are optional):
-```
-Plug 'ggandor/leap.nvim'
-Plug 'ixru/nvim-markdown'
-Plug 'MattesGroeger/vim-bookmarks'
-```
+For full functionality I also recommend these nvim plugins (but they are optional):
+- 'ggandor/leap.nvim'
+- 'madox2/vim-ai'
+- 'ixru/nvim-markdown'
+- 'MattesGroeger/vim-bookmarks'
 
 ## Runninng
 
@@ -38,26 +36,25 @@ infinote ~/cloud/notes/astrophysics scratchpad
 Here `~/cloud/notes/astrophysics` is the workspace name, and `scratchpad` is the group name. Every group will have a different color. All the groups from the chosen workspace will be shown, but you will add boxes only to the chosen group. If you don't specify the group name, it will be set to the current month in the form: yy.MM, f.e. `24.07`, so each month will be a different group.
 
 ## Shortcuts
-TODO update this
 - scroll with mouse wheel to zoom
 - click to create a new box or to choose an existing one
-- `<A-j>` - move to neighbor down
-- `<A-k>` - move to neighbor up
-- `<A-h>` - move to neighbor left
-- `<A-l>` - move to neighbor right
-- `<M-A-l>` - make a new child of the current text box, to the right
-- `<A-y>` - zoom down
-- `<A-o>` - zoom up
-- `<A-u>` - grow box
-- `<A-i>` - shrink box
+- `<C-j>` - move to neighbor down
+- `<C-k>` - move to neighbor up
+- `<C-h>` - move to neighbor left
+- `<C-l>` - move to neighbor right
+- `<C-y>` - zoom down
+- `<C-o>` - zoom up
+- `<C-i>` - grow box
+- `<C-u>` - shrink box
+- `<C-g>` - **G**ive birth to a child box
+- `<C-t>` - **T**eleport using leap.nvim plugin (must be installed)
+- `<C-f>` - **F**ocus view on the current text box
+- `<C-s>` - **S**ummon GPT into a child text box (madox2/vim-ai must be installed)
+- `<C-w>` - delete box
+- `<C-d>` - **D**etach a child from it's parent, to make it independent
+- `<C-b>` - **B**ookmark jump - when in bookmarks window, jump to location of bookmark under cursor (vim-bookmarks plugin must be installed)
 - `<A-Left>` - jump back
 - `<A-Right>` - jump forward
-- `,c` - center the view on current box
-- `,m` - maximize the view on current box (zoom out as much as possible, while keeping the current box in view)
-- `,b` - when in bookmarks window, jump to location of bookmark under cursor
-    - requires 'MattesGroeger/vim-bookmarks' installed
-- `,h` - hop to any text using leap plugin
-    - requires 'ggandor/leap.nvim' installed
 
 ## Customization
 
@@ -67,4 +64,4 @@ Edit the `config.py` file. When running infinote, it will output the exact path 
 
 ## Troubleshooting
 
-If program hangs during opening, check if vim can open your .md notes. There may be some lingering swap files that you'll need to delete. Or simply copy your note folder to a new location and see if it opens there.
+If program hangs during opening, check if vim can open your .md notes. There may be some lingering swap files that you'll need to delete (usually in `~/.local/state/nvim/swap`). Or simply copy your note folder to a new location and see if it opens there.

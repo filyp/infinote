@@ -43,10 +43,10 @@ def main():
 
     workspace_dir = Path(args.workspace).resolve()
     group_dir = (workspace_dir / args.group)
+    workspace_dir.mkdir(parents=True, exist_ok=True)
 
     # change working directory to the workspace directory
-    # so that nvim can find the bookmark file
-    workspace_dir.mkdir(parents=True, exist_ok=True)
+    # so that nvim can find the bookmark file and also files for vim-ai are included correctly
     os.chdir(workspace_dir)
 
     # load nvim, with the required.vim file

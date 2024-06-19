@@ -62,7 +62,7 @@ def load_scene(buf_handler: BufferHandler, group_dir: Path):
         buf_handler.savedir_hues[subdir] = meta[subdir.name]["hue"]
 
         # load files into buffers
-        files = [f for f in subdir.iterdir() if f.suffix == ".md"]
+        files = [f for f in subdir.iterdir() if f.suffix in [".md", ".aichat"]]
         for full_filename in files:
             rel_filename = full_filename.relative_to(workspace_dir).as_posix()
             assert full_filename.stem.isnumeric(), f"names must be integers: {rel_filename}"

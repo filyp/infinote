@@ -75,32 +75,32 @@ class Config:
     # lines matching this regex will be highlighted
     highlight_lines_regex = re.compile(r"^[\s-]*[!?]")
 
-    # (note: the order of modifiers must be M-, A-, S-, C-)
-    # keys that cannot be used: hjkl yuio men p
-    # free keys: qr as
+    # free keys: q, numbers, special chars
+    # note: the order of modifiers must be M-, A-, S-, C-
     keys.update(
         {
             # Give birth to a child box
-            f"<{mod}-g>": "create child right",
-            # delete text
-            "<C-w>": "delete text",
+            f"<{mod}-g>": "create child",
             # Teleport to any text using leap plugin
             f"<{mod}-t>": "hop",
             # Focus view on the current text box
-            f"<{mod}-f>": "center on current text",
-            # zoom in, pushing the current box to the Right
-            f"<{mod}-r>": "maximize on current text",
-            # when in bookmarks window, jump to location of bookmark under cursor
-            f"<{mod}-b>": "bookmark jump",
-            # Detach child
-            f"<{mod}-d>": "detach child",
+            f"<{mod}-f>": "focus on current text",
             # Summon GPT through vim-ai plugin
             f"<{mod}-s>": "summon gpt",
+            # delete text
+            "<C-w>": "delete text",
+            # Detach child
+            f"<{mod}-d>": "detach child",
+            # when in bookmarks window, jump to location of bookmark under cursor
+            f"<{mod}-b>": "bookmark jump",
+
             "<A-Left>": "jump back",
             "<A-Right>": "jump forward",
-            # todo? remove this option and this functionality?
+
             # # toggle editor View
             # f"<{mod}-v>": "toggle editor",
+            # # zoom in, pushing the current box to the Right
+            # f"<{mod}-r>": "maximize on current text",
         }
     )
 
@@ -108,6 +108,12 @@ class Config:
     FPS = 180
 
     input_on_creation = "- "
+    input_on_creation_aichat = """\
+>>> user
+
+>>> include
+{files_to_include}
+"""
 
     # font sizes for each indent level
     # font_sizes = [16] * 4 + [14] * 4 + [11] * 4

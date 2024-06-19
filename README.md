@@ -4,11 +4,11 @@
 
 It's like a crossover between taking notes on paper and in vim, trying to keep the benefits of both, but also with some unique features not possible in either.
 
-You have an infinitely expanding canvas on which you place notes. Each note has its own neovim buffer, and all your neovim config from your `~/.config/nvim/init.vim` will work. The notes will be saved as plain markdown files.
+You have an infinitely expanding canvas on which you place notes. Each note is a separate markdown file.
 
 ## Instalation
 
-Requires neovim to run. I you have existing `init.vim` file, it will be sourced.
+Requires neovim to run. (I you have an existing `~/.config/nvim/init.vim` file, it will be sourced, it's not needed though.)
 
 ```bash
 pipx install infinote-md

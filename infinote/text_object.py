@@ -78,6 +78,7 @@ class TextboxInsidesRenderer:
         self.selection_color.setHsl(hue, 96, int(Config.selection_brightness * 100))
         self._border_glowing = False
         self.brightness_multiplier = brightness_multiplier
+        self.line_nums_shown = None
 
         doc = self.text_box.document()
         doc.setIndentWidth(1)
@@ -122,6 +123,9 @@ class TextboxInsidesRenderer:
         cursor = self.text_box.textCursor()
         cursor_pos = cursor.position()
         y, x = self._pos_to_yx(cursor_pos)
+        if self.line_nums_shown is not None:
+            # get the real line number
+            y = self.line_nums_shown[y - 1] + 1
         nvim.api.win_set_cursor(0, (y, x))
 
     def if_qt_selection_sync_into_vim(self, nvim):
@@ -292,6 +296,7 @@ class TextboxInsidesRenderer:
     def hide_unimportant_lines(self):
         lines = self.text_box.toPlainText().split("\n")
         line_nums_to_hide = []
+        self.line_nums_shown = []
         for i, line in enumerate(lines):
             if (
                 # keep lines with a non-space character at the beginning
@@ -303,6 +308,7 @@ class TextboxInsidesRenderer:
                 # keep bookmarked lines
                 or i + 1 in self.sign_lines
             ):
+                self.line_nums_shown.append(i)
                 continue
             line_nums_to_hide.append(i)
 
@@ -471,7 +477,9 @@ class DraggableText(QGraphicsProxyWidget, BoxInfo):
             parent_scale = parent.get_plane_scale()
             self.pos_rel_to_parent_vect = (target_pos - parent_pos) / parent_scale
             parent.reposition()
-        # self.view.dummy.setFocus()
+        
+        if Config.vim_mode:
+            self.view.dummy.setFocus()
 
     def get_plane_scale(self):
         if self.parent_filename is not None:

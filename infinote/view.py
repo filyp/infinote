@@ -102,8 +102,14 @@ class GraphicView(QGraphicsView):
             # pin the click position, in case of dragging
             click_pos = event.screenPos() / self.global_scale
             item._pin_pos = (click_pos - item.plane_pos_vect) / item.get_plane_scale()
-            # pass if event is drag
+            
+            # we need to first process the click by the widget to set cursor in it
+            # we also need to pass the event, in case it's a drag event
             super().mousePressEvent(event)
+            item.insides_renderer.sync_qt_cursor_into_vim(self.nvim)
+            # note: maybe that makes dragging less efficient, but we need to do it to set the cursor
+            self.buf_handler.update_all_texts()
+
         elif isinstance(item, EditorBox):
             _exit_visual_mode(self.nvim)
             # we need to first process the click by the widget to set cursor in it

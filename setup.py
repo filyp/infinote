@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="infinote-md",
-    version="0.4.0",  # Update the version number for new releases
+    version="0.4.1",  # Update the version number for new releases
     author="Filip Sondej",
     description="Feel the spatial freedom in your notes.",
     long_description_content_type="text/markdown",

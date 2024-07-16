@@ -11,7 +11,12 @@ You have an infinitely expanding canvas on which you place notes. Each note is a
 Requires neovim to run. (I you have an existing `~/.config/nvim/init.vim` file, it will be sourced, it's not needed though.)
 
 ```bash
-pipx install infinote-md
+pipx install infinote-md --python $(which python3.11 1>/dev/null || which python3)
+```
+
+For LLM support, you also need to set your OpenAI API key:
+```bash
+echo "YOUR_OPENAI_API_KEY" > ~/.config/openai.token
 ```
 
 For full functionality I also recommend these nvim plugins (but they are optional):
@@ -66,4 +71,4 @@ Edit the `config.py` file. When running infinote, it will output the exact path 
 
 If program hangs during opening, check if vim can open your .md notes. There may be some lingering swap files that you'll need to delete (usually in `~/.local/state/nvim/swap`). Or simply copy your note folder to a new location and see if it opens there.
 
-If with python3.12 you get `Exception ignored in [...] RuntimeError: Event loop is closed` while closing, don't worry, it doesn't pose a problem. I just couldn't figure out how to get rid of that warning (seems like some PySide6 weirdness). If it bothers you, install with python3.11: `pipx install infinote-md --python $(which python3.11)`.
+If with python3.12 you get `Exception ignored in [...] RuntimeError: Event loop is closed` while closing, don't worry, it doesn't pose a problem. I just couldn't figure out how to get rid of that warning (seems like some PySide6 weirdness). If it bothers you, install python3.11 and reinstall infinote using the command in the installation section.

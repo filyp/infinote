@@ -44,7 +44,7 @@ class Config:
     # keys = colemak_keys
 
     # size params
-    text_width = 340
+    text_width = 400
     text_max_height = text_width  # * 1.618
     starting_box_scale = 0.9
     # how much smaller the child boxes are compared to their parent on their creation
@@ -68,7 +68,7 @@ class Config:
 
     # https://blog.depositphotos.com/15-cyberpunk-color-palettes-for-dystopian-designs.html
     background_color = "#000000"
-    border_brightness = 0.4
+    border_brightness = 0.15
     text_brightness = 0.8
     selection_brightness = 0.23
     non_persistent_hue = 340

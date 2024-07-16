@@ -306,6 +306,13 @@ class TextboxInsidesRenderer:
                 continue
             line_nums_to_hide.append(i)
 
+        # draw + signs on lines starting with "-" and having indented sublines
+        line_nums_minus_to_plus = []
+        for i, line in enumerate(lines[:-1]):
+            next_line = lines[i + 1]
+            if re.match(r"^-", line) and re.match(r"^\s+\S", next_line):
+                line_nums_minus_to_plus.append(i)
+
         # delete the lines
         # note: it would be more efficient to only draw from the start what is necessary
         # but that complicates text marking positionings
@@ -319,6 +326,12 @@ class TextboxInsidesRenderer:
                 cursor.select(QTextCursor.BlockUnderCursor)
                 block = block.next()
                 cursor.removeSelectedText()
+            elif line_num in line_nums_minus_to_plus:
+                # replace first char ("-") with "+"
+                cursor.setPosition(block.position())
+                cursor.movePosition(QTextCursor.NextCharacter, QTextCursor.KeepAnchor)
+                cursor.insertText("+")
+                block = block.next()
             else:
                 block = block.next()
             line_num += 1

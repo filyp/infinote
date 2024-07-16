@@ -554,12 +554,12 @@ class DraggableText(QGraphicsProxyWidget, BoxInfo):
         # put in info all the BoxInfo fields (look at BoxInfo class attributes)
         info = {k: self.__dict__[k] for k in BoxInfo.__annotations__}
         filepath = Path(self.filename).resolve()
-        info_path = filepath.parent / ".box_info" / f"{filepath.stem}.json"
+        info_path = filepath.parent / "boxinfo" / f"{filepath.stem}.json"
         info_path.write_text(json.dumps(info, indent=4))
 
     def load_info(self):
         filepath = Path(self.filename).resolve()
-        info_path = filepath.parent / ".box_info" / f"{filepath.stem}.json"
+        info_path = filepath.parent / "boxinfo" / f"{filepath.stem}.json"
         info = json.loads(info_path.read_text())
         self.__dict__.update(info)
 

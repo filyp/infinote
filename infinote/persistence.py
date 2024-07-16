@@ -21,7 +21,7 @@ def _name_to_hue(name: str):
 
 
 def get_box_info(full_filename: Path):
-    info_path = full_filename.parent / ".box_info" / f"{full_filename.stem}.json"  # NOSONAR
+    info_path = full_filename.parent / "boxinfo" / f"{full_filename.stem}.json"  # NOSONAR
     info = json.loads(info_path.read_text())
     return BoxInfo(**info)
 
@@ -44,14 +44,14 @@ def load_scene(buf_handler: BufferHandler, group_dir: Path):
         assert not any(workspace_dir.iterdir()), f"workspace_dir not empty: {workspace_dir}"
         # create the main subdir
         group_dir.mkdir(exist_ok=True)
-        (group_dir / ".box_info").mkdir(exist_ok=True)
+        (group_dir / "boxinfo").mkdir(exist_ok=True)
         # create one text
         buf_handler.create_text(group_dir, BoxInfo())
         return
 
     # create the main subdir
     group_dir.mkdir(exist_ok=True)
-    (group_dir / ".box_info").mkdir(exist_ok=True)
+    (group_dir / "boxinfo").mkdir(exist_ok=True)
     meta.update(json.loads(meta_path.read_text()))
     subdirs = [d for d in workspace_dir.iterdir() if d.is_dir()]
     print(f"subdirs: {[dir.name for dir in subdirs]}")

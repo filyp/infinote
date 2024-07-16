@@ -11,8 +11,10 @@ You have an infinitely expanding canvas on which you place notes. Each note is a
 Requires neovim to run. (I you have an existing `~/.config/nvim/init.vim` file, it will be sourced, it's not needed though.)
 
 ```bash
-pipx install infinote-md --python $(which python3.11 1>/dev/null || which python3)
+pipx install infinote-md --python $(which python3.11)
 ```
+
+(If you don't have python3.11, use your default python3 instead, but note that 3.12 will cause some warnings while running. They can be safely ignored though.)
 
 For LLM support, you also need to set your OpenAI API key:
 ```bash

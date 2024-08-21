@@ -42,6 +42,8 @@ infinote ~/cloud/notes/astrophysics scratchpad
 
 Here `~/cloud/notes/astrophysics` is the workspace name, and `scratchpad` is the group name. Every group will have a different color. All the groups from the chosen workspace will be shown, but you will add boxes only to the chosen group. If you don't specify the group name, it will be set to the current month in the form: yy.MM, f.e. `24.07`, so each month will be a different group.
 
+To close the program, press `Alt-F4`.
+
 ## Shortcuts
 - scroll with mouse wheel to zoom
 - click to create a new box or to choose an existing one

@@ -1,3 +1,6 @@
+" autosave buffers on each change
+autocmd BufLeave * update
+
 " " Implement normal ctrl functions in vim, for non-vim users
 " Undo in n and i mode
 nnoremap <C-z> u
